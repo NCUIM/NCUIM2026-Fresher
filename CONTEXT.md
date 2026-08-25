@@ -45,7 +45,7 @@ Participant 層級的 QR Code，代表這個人本身，供他人掃描以建立
 _Avoid_: 個人 QR, 名片碼
 
 **Scan（掃描）**:
-一位 Participant 主動掃描另一位 Participant Personal Code 的動作。一次 Scan 會同時促成雙方的 Collection，但 Scan 本身只歸屬於**發起的那一方**，是衡量主動程度的唯一依據。
+一位 Participant 主動掃描另一位 Participant Personal Code 的動作。一次 Scan 會同時促成雙方的 Collection，但 Scan 本身只歸屬於**發起的那一方**，是衡量主動程度的唯一依據。此歸屬用於 Admin 端統計誰較主動，以及 Achievement 的達成判定，**不影響 Score 的基礎分**——基礎分依 Collection 計算，雙方對等。
 _Avoid_: 收集, 加好友
 
 **Collection（收集紀錄）**:
@@ -79,7 +79,7 @@ _Avoid_: 小隊, 隊伍, 群組
 _Avoid_: 任務, 徽章, 關卡
 
 **Score（分數）**:
-一位 Participant 在單一 Event 中累積的總分，由「每次 Scan 的基礎分」與「達成 Achievement 的獎勵分」相加而成。兩者的分值皆由 Admin 逐場設定。**基礎分需待該次 Scan 對應的 Impression 撰寫完成後才入帳**——掃描本身不阻斷，但未撰寫者不計分。
+一位 Participant 在單一 Event 中累積的總分，由「每筆 Collection 的基礎分」與「達成 Achievement 的獎勵分」相加而成。兩者的分值皆由 Admin 逐場設定。一次 Scan 為雙方各建立一筆 Collection，**雙方各自的基礎分以各自撰寫的 Impression 為條件**——掃描本身不阻斷，未撰寫者不計分。Scan 的發起方不影響 Score。
 _Avoid_: 點數, 積分, 經驗值
 
 **Leaderboard（排行榜）**:

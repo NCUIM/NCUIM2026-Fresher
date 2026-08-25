@@ -1,0 +1,297 @@
+// 詞彙依循 /CONTEXT.md。相關決策見 /docs/adr/。
+// 命名刻意與 CONTEXT.md 的詞彙一致，避免同義詞漂移。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 起，連線 URL 不再寫在此處，改由 prisma.config.ts 提供給 Migrate，
+// 執行期則由 PrismaClient 的 driver adapter 建立連線。見 lib/prisma.ts。
+datasource db {
+  provider = "postgresql"
+}
+
+enum EventStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum Role {
+  PARTICIPANT
+  STAFF
+}
+
+enum AchievementType {
+  SCAN_COUNT // 累計 Scan 達 N 人
+  COLLECTED_COUNT // 累計被收集達 N 人
+  EARLY_SCAN // Event 開始後 N 分鐘內完成第一次 Scan
+  SCAN_ROLE // Scan 到具特定 Role 的人達 N 人
+  TEAM_COLLECT // 收集同 Team 達 N 人（threshold = -1 代表「全部」）
+}
+
+model Event {
+  id       String      @id @default(cuid())
+  name     String
+  passcode String // Q21：報到時的活動通關碼
+  status   EventStatus @default(ACTIVE)
+  startsAt DateTime
+
+  // 封存與刪除。第一階段由 Admin 手動執行，purgeAfter 僅作為顯示給使用者的日期依據。
+  archivedAt DateTime?
+  purgeAfter DateTime? // 封存 + 14 天
+
+  basePoints      Int @default(10) // 每筆 Collection 的基礎分，雙方對等
+  leaderboardTopN Int @default(10) // Q31：只公開前 N 名
+  teamCount       Int @default(0) // 0 代表本場不分組
+
+  createdAt DateTime @default(now())
+
+  entryCodes    EntryCode[]
+  participants  Participant[]
+  teams         Team[]
+  scans         Scan[]
+  collections   Collection[]
+  impressions   Impression[]
+  achievements  AchievementDef[]
+  announcements Announcement[]
+}
+
+/// Event 層級的註冊碼。掃描後建立身分並決定 Role。
+/// 與 Participant.personalCode 是完全不同的東西，不可共用。
+model EntryCode {
+  id      String  @id @default(cuid())
+  eventId String
+  code    String  @unique
+  role    Role    @default(PARTICIPANT)
+  label   String? // 例如「一般參與者」「工作人員」
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
+model Participant {
+  id      String @id @default(cuid())
+  eventId String
+
+  /// 私密憑證，存於瀏覽器，用於識別身分。
+  /// 絕不可等同 personalCode——否則每位收集過此人的人都能冒充他。
+  sessionToken String @unique
+
+  /// 公開碼，供他人掃描以建立 Collection。不可用於登入。
+  personalCode String @unique
+
+  role   Role    @default(PARTICIPANT)
+  teamId String?
+
+  // Profile
+  nickname  String
+  avatarUrl String?
+  socialUrl String? // 一則 https 社群連結
+  bio       String? // 一句話自我介紹
+  icons     String[] // 三個個性化圖示的 key，純裝飾
+
+  // 找回身分。第一階段由工作人員於後台協助；第二階段改為 email 自助找回。
+  // 見 docs/specs 的「簡化『身分找回』的後果」。
+  email         String?
+  emailVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  event               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  team                Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  scansInitiated      Scan[]              @relation("ScanInitiator")
+  scansReceived       Scan[]              @relation("ScanTarget")
+  collections         Collection[]        @relation("CollectionOwner")
+  collectedBy         Collection[]        @relation("CollectionSubject")
+  impressionsWritten  Impression[]        @relation("ImpressionAuthor")
+  impressionsReceived Impression[]        @relation("ImpressionSubject")
+  showcaseSlots       ShowcaseSlot[]      @relation("ShowcaseOwner")
+  showcasedBy         ShowcaseSlot[]      @relation("ShowcaseSubject")
+  achievements        AchievementEarned[]
+  announcementReads   AnnouncementRead[]
+
+  @@index([eventId])
+  @@index([teamId])
+}
+
+/// 由系統於報到時輪流指派（第一階段唯一模式）。
+/// 因報到持續發生，隊伍人數會在活動過程中不斷增加——這正是 ADR-0002 存在的原因。
+model Team {
+  id      String  @id @default(cuid())
+  eventId String
+  number  Int
+  name    String?
+
+  event   Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  members Participant[]
+
+  @@unique([eventId, number])
+}
+
+/// 一次主動掃描。Scan 只歸屬於發起者，是衡量主動程度的唯一依據。
+/// 一次 Scan 同時產生兩筆 Collection（雙向持有）。
+///
+/// 注意：發起方「不」影響基礎分。基礎分依 Collection 計算、雙方對等，
+/// 各自以自己撰寫的 Impression 為條件。scannerId 的用途是 Admin 端的
+/// 主動程度統計，以及 Achievement 範本 1、3 的達成判定。
+model Scan {
+  id        String @id @default(cuid())
+  eventId   String
+  scannerId String // 發起者。用於統計與成就判定，不決定基礎分歸屬
+  scannedId String
+
+  /// 兩個 participant id 排序後串接。
+  /// 用途：讓 A→B 與 B→A 被視為同一次相遇，實作 Q29 的冪等要求。
+  /// 若只對 (scannerId, scannedId) 設唯一鍵，B 事後回掃 A 會被誤判為新的相遇。
+  pairKey String
+
+  createdAt DateTime @default(now())
+
+  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scanner     Participant  @relation("ScanInitiator", fields: [scannerId], references: [id], onDelete: Cascade)
+  scanned     Participant  @relation("ScanTarget", fields: [scannedId], references: [id], onDelete: Cascade)
+  collections Collection[]
+
+  @@unique([eventId, pairKey])
+  @@index([scannerId])
+  @@index([scannedId])
+}
+
+/// 持有關係，對稱。一次 Scan 產生兩筆（雙方各一）。
+/// 基礎分的計算單位：每筆 Collection 若其 owner 已對 subject 撰寫 Impression，
+/// 即為 owner 貢獻一份 Event.basePoints。
+model Collection {
+  id        String @id @default(cuid())
+  eventId   String
+  ownerId   String
+  subjectId String
+  scanId    String
+
+  createdAt DateTime @default(now())
+
+  event   Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  owner   Participant @relation("CollectionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  subject Participant @relation("CollectionSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  scan    Scan        @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, subjectId])
+  @@index([eventId])
+}
+
+/// 一段針對特定他人的短評。一律具名，僅收件人與 Admin 可讀（ADR-0003）。
+/// 撰寫完成後，對應 Scan 的基礎分才入帳。
+model Impression {
+  id        String @id @default(cuid())
+  eventId   String
+  authorId  String
+  subjectId String
+
+  text String // 50 字上限於應用層驗證
+
+  /// 由收件人（subject）設定，非作者。隱藏只影響收件人的檢視，不刪除資料——
+  /// Admin 仍須能查看以進行審核。
+  hiddenBySubject Boolean   @default(false)
+  reportedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event   Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author  Participant @relation("ImpressionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  subject Participant @relation("ImpressionSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, subjectId])
+  @@index([subjectId])
+}
+
+/// 九宮格，至多九格。公開可瀏覽。
+/// 系統不得提供「我被幾個人放入 Showcase」的反向查詢或計數（ADR-0003）。
+model ShowcaseSlot {
+  id        String @id @default(cuid())
+  ownerId   String
+  subjectId String
+  position  Int // 0–8
+
+  owner   Participant @relation("ShowcaseOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  subject Participant @relation("ShowcaseSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, position])
+  @@unique([ownerId, subjectId])
+}
+
+/// 第一階段由設定檔於建立 Event 時寫入，變更需重新部署。
+/// 之後開放 Admin 後台自訂時，不需要改動資料結構。
+model AchievementDef {
+  id      String @id @default(cuid())
+  eventId String
+  key     String
+
+  type      AchievementType
+  threshold Int // TEAM_COLLECT 為 -1 時代表「全部隊員」
+  points    Int
+  hidden    Boolean         @default(false) // 隱藏成就達成前不得透露名稱、條件與進度
+
+  title       String
+  description String?
+  targetRole  Role? // 僅 SCAN_ROLE 使用
+
+  event  Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  earned AchievementEarned[]
+
+  @@unique([eventId, key])
+}
+
+/// ADR-0002：達成狀態必須持久化，不可每次由當前資料推導。
+/// 重算只新增此表的資料列，永不刪除。
+model AchievementEarned {
+  id               String @id @default(cuid())
+  participantId    String
+  achievementDefId String
+
+  /// 達成當下的分值。之後 AchievementDef.points 變動不影響已達成者。
+  pointsAwarded Int
+
+  /// 達成當下的門檻。TEAM_COLLECT 記錄當時的隊伍人數，
+  /// 使「集齊全隊」不因日後有人加入隊伍而失效。
+  snapshotThreshold Int
+
+  earnedAt DateTime @default(now())
+
+  participant   Participant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  achievementDef AchievementDef @relation(fields: [achievementDefId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, achievementDefId])
+  @@index([participantId])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  eventId   String
+  body      String
+  createdAt DateTime @default(now())
+
+  event Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reads AnnouncementRead[]
+
+  @@index([eventId])
+}
+
+model AnnouncementRead {
+  participantId  String
+  announcementId String
+  readAt         DateTime @default(now())
+
+  participant  Participant  @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([participantId, announcementId])
+}
+
+/// 帳號預先建立，不開放註冊。不使用共用密碼——需能辨別是哪位 Admin 執行了操作。
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}

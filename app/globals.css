@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   手機瀏覽器的四個必要處理。見 ADR-0004 與 spec 的目標瀏覽器清單。
+   --------------------------------------------------------------- */
+
+:root {
+  /* 底部安全區，供固定於底部的操作列使用（iPhone 底部橫條） */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+html {
+  /* iOS 橫置時不自動放大字級 */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* 網址列會伸縮，100vh 會被裁切；dvh 才是實際可視高度 */
+  min-height: 100dvh;
+  /* 避免整頁橡皮筋回彈干擾掃描器與漂浮牆 */
+  overscroll-behavior-y: none;
+}
+
+/*
+  iOS Safari 在輸入框 font-size < 16px 時會於聚焦時自動縮放整頁，
+  且縮放後不會自動還原，體驗很差。
+  這裡統一保底，不使用 maximum-scale=1 來壓制——那會連帶關閉雙指縮放，
+  對視力不佳的使用者是可及性問題。
+*/
+input,
+textarea,
+select {
+  font-size: max(16px, 1rem);
+}
+
+/* 觸控目標下限。九宮格格子、掃描按鈕等互動元件套用此類別。 */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+}

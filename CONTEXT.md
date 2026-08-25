@@ -52,6 +52,18 @@ _Avoid_: 收集, 加好友
 一筆「某位 Participant 在某場 Event 中持有某張 Card」的紀錄。一次 Scan 會**同時**為掃描雙方各建立一筆 Collection，因此持有關係是對稱的；誰主動發起則記錄在 Scan 而非 Collection。同一位 Participant 在單一 Event 內的所有 Collection 構成他的收集清單。
 _Avoid_: 好友清單, 通訊錄
 
+**Impression（特質描述）**:
+一位 Participant 針對另一位已收集的 Participant 所寫的 50 字以內短評，描述對方的特質與自己的想法。必定具名，且只有**收件人與 Admin** 看得到。每一組收集關係至多一則，可修改。
+_Avoid_: 留言, 評論, 回饋, 悄悄話
+
+**Impression Wall（漂浮牆）**:
+一位 Participant 收到的所有 Impression 的動態漂浮展示頁面。僅本人與 Admin 可見。收件人可隱藏個別 Impression，隱藏時可一併回報給 Admin。
+_Avoid_: 留言板, 塗鴉牆
+
+**Showcase（九宮格）**:
+Participant 從自己收集到的 Card 中挑選至多九張的展示格，公開可瀏覽。放入 Showcase 的對象，其 Impression 會在該收件人的 Impression Wall 上以更顯眼的方式呈現。系統不提供「我被幾個人放入 Showcase」的反向查詢。
+_Avoid_: 展示櫃, 收藏格, 卡冊
+
 **Announcement（公告）**:
 由 Admin 發布、於單一 Event 內對所有 Participant 顯示的活動訊息。
 _Avoid_: 通知, 訊息
@@ -67,7 +79,7 @@ _Avoid_: 小隊, 隊伍, 群組
 _Avoid_: 任務, 徽章, 關卡
 
 **Score（分數）**:
-一位 Participant 在單一 Event 中累積的總分，由「每次 Scan 的基礎分」與「達成 Achievement 的獎勵分」相加而成。兩者的分值皆由 Admin 逐場設定。
+一位 Participant 在單一 Event 中累積的總分，由「每次 Scan 的基礎分」與「達成 Achievement 的獎勵分」相加而成。兩者的分值皆由 Admin 逐場設定。**基礎分需待該次 Scan 對應的 Impression 撰寫完成後才入帳**——掃描本身不阻斷，但未撰寫者不計分。
 _Avoid_: 點數, 積分, 經驗值
 
 **Leaderboard（排行榜）**:

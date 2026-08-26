@@ -39,6 +39,23 @@ export async function setAchievementThreshold(
   await prisma.achievementDef.updateMany({ where: { key }, data: { threshold } });
 }
 
+/**
+ * 取出寄給某位參與者的一次性權杖。
+ *
+ * 真實流程中這個值來自信箱。測試無法收信，因此直接從資料庫取值——
+ * 這是「取得輸入」，不是斷言：所有驗證仍然是針對 HTTP 行為進行。
+ */
+export async function readToken(
+  participantId: string,
+  purpose: "VERIFY_EMAIL" | "RECOVER_SESSION",
+): Promise<string | null> {
+  const row = await prisma.recoveryToken.findFirst({
+    where: { participantId, purpose, usedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+  return row?.token ?? null;
+}
+
 /** 調整排行榜公開名次數，用於驗證「只回傳前 N 名」。 */
 export async function setLeaderboardTopN(n: number): Promise<void> {
   await prisma.event.updateMany({ data: { leaderboardTopN: n } });

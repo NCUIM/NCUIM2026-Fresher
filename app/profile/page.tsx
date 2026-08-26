@@ -23,6 +23,8 @@ export default async function ProfilePage() {
           socialUrl: me.socialUrl,
           icons: me.icons,
           avatarUrl: me.avatarUrl,
+          email: me.email,
+          emailVerified: me.emailVerified,
         }}
       />
 

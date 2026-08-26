@@ -13,6 +13,8 @@ type Props = {
     socialUrl: string | null;
     icons: string[];
     avatarUrl: string | null;
+    email: string | null;
+    emailVerified: boolean;
   };
 };
 
@@ -25,6 +27,23 @@ export function ProfileEditor({ initial }: Props) {
   const [socialUrl, setSocialUrl] = useState(initial.socialUrl ?? "");
   const [icons, setIcons] = useState<string[]>(initial.icons);
   const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
+  const [email, setEmail] = useState(initial.email ?? "");
+  const [resending, setResending] = useState(false);
+
+  const emailUnchanged = (email.trim() || null) === initial.email;
+  const showUnverified = Boolean(initial.email) && !initial.emailVerified && emailUnchanged;
+
+  async function resendVerification() {
+    setResending(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/verify/resend", { method: "POST" });
+      setNotice(res.ok ? "驗證信已重新寄出" : "重寄失敗，請稍後再試");
+    } finally {
+      setResending(false);
+    }
+  }
 
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -87,6 +106,7 @@ export function ProfileEditor({ initial }: Props) {
           nickname,
           bio: bio.trim() || null,
           socialUrl: socialUrl.trim() || null,
+          email: email.trim() || null,
           icons,
         }),
       });
@@ -163,6 +183,41 @@ export function ProfileEditor({ initial }: Props) {
           className="rounded-lg border border-gray-300 px-3 py-2.5"
         />
       </label>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">電子信箱</span>
+          <span className="text-xs text-gray-500">
+            用來在換裝置或瀏覽器資料被清除時找回收集成果
+          </span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            inputMode="email"
+            autoCapitalize="none"
+            autoComplete="email"
+            placeholder="you@example.com"
+            className="rounded-lg border border-gray-300 px-3 py-2.5"
+          />
+        </label>
+
+        {showUnverified && (
+          <div className="flex flex-col gap-1.5 rounded-lg bg-amber-50 px-3 py-2.5">
+            <p className="text-sm text-amber-900">
+              這個信箱還沒驗證，目前無法用來找回身分。
+            </p>
+            <button
+              type="button"
+              onClick={resendVerification}
+              disabled={resending}
+              className="self-start text-sm text-amber-900 underline disabled:text-amber-400"
+            >
+              {resending ? "寄送中…" : "重新寄送驗證信"}
+            </button>
+          </div>
+        )}
+      </div>
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium">社群連結</span>

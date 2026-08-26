@@ -26,9 +26,14 @@ export default async function Home() {
             請掃描主辦方提供的<strong>報到 QR Code</strong> 開始。
           </p>
           <p className="text-xs text-gray-400">
-            如果你已經報到過但看到這個畫面，可能是瀏覽器資料被清除了。
-            請向現場工作人員說明，他們可以協助你找回身分。
+            已經報到過卻看到這個畫面？可能是瀏覽器資料被清除了。
           </p>
+          <a
+            href="/recover"
+            className="tap-target flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium"
+          >
+            用信箱找回我的收集成果
+          </a>
         </>
       ) : (
         <p className="text-sm text-gray-500">目前沒有進行中的活動。</p>

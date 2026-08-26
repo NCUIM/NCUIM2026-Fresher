@@ -72,6 +72,26 @@ export default async function MePage() {
         <span className="self-end pb-1 text-sm text-gray-300">分</span>
       </Link>
 
+      {/*
+        Q20 的非阻斷式提醒：不擋任何功能，但整場活動都看得到，
+        讓打錯信箱的人有時間發現——否則要到活動後第八天想查看時才會知道。
+      */}
+      {(!me.email || !me.emailVerified) && (
+        <Link
+          href="/profile"
+          className="flex flex-col gap-0.5 rounded-2xl bg-amber-50 px-4 py-3"
+        >
+          <span className="font-medium text-amber-900">
+            {me.email ? "信箱尚未驗證" : "還沒填寫信箱"}
+          </span>
+          <span className="text-sm text-amber-800">
+            {me.email
+              ? "請到信箱點擊驗證連結，否則之後無法自己找回收集成果"
+              : "填了信箱，換手機或清除資料時才能自己找回收集成果"}
+          </span>
+        </Link>
+      )}
+
       {pending.length > 0 && (
         <Link
           href="/write"

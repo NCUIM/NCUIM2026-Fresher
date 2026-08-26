@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { firstErrorMessage, profileSchema } from "@/lib/validation";
+import { sendVerificationEmail } from "@/lib/send-verification";
 import { computeScore, pendingImpressions } from "@/lib/score";
 import { evaluateAchievements, getAchievementStatus } from "@/lib/achievements";
 
@@ -30,6 +31,8 @@ export async function GET() {
     bio: me.bio,
     socialUrl: me.socialUrl,
     icons: me.icons,
+    email: me.email,
+    emailVerified: me.emailVerified,
     personalCode: me.personalCode,
     team: me.team ? { number: me.team.number, name: me.team.name } : null,
     score,
@@ -64,7 +67,10 @@ export async function PUT(req: Request) {
       { status: 400 },
     );
   }
-  const { nickname, socialUrl, bio, icons } = parsed.data;
+  const { nickname, socialUrl, bio, icons, email } = parsed.data;
+
+  // 信箱換了就必須重新驗證：舊的驗證狀態只證明了舊位址收得到信。
+  const emailChanged = (email ?? null) !== me.email;
 
   const updated = await prisma.participant.update({
     where: { id: me.id },
@@ -73,9 +79,22 @@ export async function PUT(req: Request) {
       socialUrl: socialUrl ?? null,
       bio: bio ?? null,
       icons,
+      email: email ?? null,
+      ...(emailChanged ? { emailVerified: false } : {}),
     },
-    select: { nickname: true, socialUrl: true, bio: true, icons: true },
+    select: {
+      nickname: true,
+      socialUrl: true,
+      bio: true,
+      icons: true,
+      email: true,
+      emailVerified: true,
+    },
   });
+
+  if (emailChanged && email) {
+    await sendVerificationEmail(me.id, new URL(req.url).origin);
+  }
 
   return NextResponse.json(updated);
 }

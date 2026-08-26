@@ -21,6 +21,11 @@ enum Role {
   STAFF
 }
 
+enum TokenPurpose {
+  VERIFY_EMAIL // 確認信箱可收信
+  RECOVER_SESSION // 在新裝置上找回身分
+}
+
 enum AchievementType {
   SCAN_COUNT // 累計 Scan 達 N 人
   COLLECTED_COUNT // 累計被收集達 N 人
@@ -101,6 +106,7 @@ model Participant {
   event               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   team                Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
   avatar              Avatar?
+  recoveryTokens      RecoveryToken[]
   scansInitiated      Scan[]              @relation("ScanInitiator")
   scansReceived       Scan[]              @relation("ScanTarget")
   collections         Collection[]        @relation("CollectionOwner")
@@ -114,6 +120,27 @@ model Participant {
 
   @@index([eventId])
   @@index([teamId])
+}
+
+/// 寄到信箱的一次性權杖。
+///
+/// 這是 ADR-0001 所述、對抗 iOS ITP 七天清除的補償機制：瀏覽器儲存失效後，
+/// 使用者仍能透過信箱回到自己的收集成果。
+///
+/// 一次性且有到期時間——連結若外流（轉寄、共用裝置的信箱），
+/// 長期有效的權杖等同於一把永久的身分鑰匙。
+model RecoveryToken {
+  id            String       @id @default(cuid())
+  participantId String
+  token         String       @unique
+  purpose       TokenPurpose
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime     @default(now())
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([participantId, purpose])
 }
 
 /// 頭像影像本體。

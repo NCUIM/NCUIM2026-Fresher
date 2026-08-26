@@ -16,6 +16,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
   const [passcode, setPasscode] = useState("");
   const [nickname, setNickname] = useState("");
   const [socialUrl, setSocialUrl] = useState("");
+  const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
   const [icons, setIcons] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +45,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           nickname,
           socialUrl: socialUrl.trim() || null,
           bio: bio.trim() || null,
+          email: email.trim() || null,
           icons,
         }),
       });
@@ -94,6 +96,25 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           onChange={(e) => setNickname(e.target.value)}
           maxLength={NICKNAME_MAX}
           required
+          className="rounded-lg border border-gray-300 px-3 py-2.5"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium">
+          電子信箱 <span className="text-gray-400">（選填，但強烈建議）</span>
+        </span>
+        <span className="text-xs text-gray-500">
+          手機出狀況或瀏覽器資料被清除時，這是你唯一能自己找回收集成果的方法
+        </span>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          inputMode="email"
+          autoCapitalize="none"
+          autoComplete="email"
+          placeholder="you@example.com"
           className="rounded-lg border border-gray-300 px-3 py-2.5"
         />
       </label>

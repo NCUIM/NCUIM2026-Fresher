@@ -27,6 +27,17 @@ const httpsUrl = z
     { message: "請提供 https 開頭的網址" },
   );
 
+/**
+ * 信箱為選填。Q20 決定採非阻斷式提醒：沒填或打錯都不影響報到與收集，
+ * 只是會在頁面上持續顯示未驗證提示，讓人有一整天的時間發現並修正。
+ */
+const email = z
+  .string()
+  .trim()
+  .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+    message: "信箱格式不正確",
+  });
+
 export const profileSchema = z.object({
   nickname: z.string().trim().min(1, "請輸入暱稱").max(NICKNAME_MAX),
   socialUrl: httpsUrl.optional().nullable(),
@@ -38,7 +49,10 @@ export const profileSchema = z.object({
     .refine((keys) => new Set(keys).size === keys.length, {
       message: "圖示不可重複",
     }),
+  email: email.optional().nullable(),
 });
+
+export const recoveryRequestSchema = z.object({ email });
 
 export const joinSchema = profileSchema.extend({
   entryCode: z.string().trim().min(1),

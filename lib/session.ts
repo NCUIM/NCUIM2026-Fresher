@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
-const COOKIE_NAME = "pid";
+/** 匯出供 Route Handler 直接在回應上設定 cookie 時使用。 */
+export const SESSION_COOKIE = "pid";
+const COOKIE_NAME = SESSION_COOKIE;
 
 /**
  * 身分憑證存於 HttpOnly cookie 而非 localStorage，理由有二：
@@ -14,15 +16,24 @@ const COOKIE_NAME = "pid";
  */
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 天，涵蓋活動後的 14 天查看期
 
-export async function setSessionCookie(sessionToken: string): Promise<void> {
-  const store = await cookies();
-  store.set(COOKIE_NAME, sessionToken, {
+export function sessionCookieOptions() {
+  return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: COOKIE_MAX_AGE_SECONDS,
-  });
+  };
+}
+
+/**
+ * ⚠️ 只能在 Route Handler 或 Server Function 中呼叫。
+ * Next.js 不允許在 Server Component 渲染期間設定 cookie——不會報錯，
+ * 但 Set-Cookie 不會送出，症狀是「看起來成功了，實際上沒登入」。
+ */
+export async function setSessionCookie(sessionToken: string): Promise<void> {
+  const store = await cookies();
+  store.set(COOKIE_NAME, sessionToken, sessionCookieOptions());
 }
 
 export async function clearSessionCookie(): Promise<void> {

@@ -4,6 +4,7 @@ import { generatePersonalCode, generateSessionToken } from "@/lib/codes";
 import { setSessionCookie } from "@/lib/session";
 import { pickTeamIdForNewParticipant } from "@/lib/teams";
 import { firstErrorMessage, joinSchema } from "@/lib/validation";
+import { sendVerificationEmail } from "@/lib/send-verification";
 
 /** 報到：驗證 Entry Code 與通關碼，建立 Participant，並種下身分 cookie。 */
 export async function POST(req: Request) {
@@ -21,7 +22,8 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { entryCode, passcode, nickname, socialUrl, bio, icons } = parsed.data;
+  const { entryCode, passcode, nickname, socialUrl, bio, icons, email } =
+    parsed.data;
 
   const entry = await prisma.entryCode.findUnique({
     where: { code: entryCode.toUpperCase() },
@@ -59,12 +61,19 @@ export async function POST(req: Request) {
         socialUrl: socialUrl ?? null,
         bio: bio ?? null,
         icons,
+        email: email ?? null,
       },
       include: { team: true },
     });
   });
 
   await setSessionCookie(sessionToken);
+
+  // 等待權杖建立完成（只有 SMTP 呼叫在背景進行），
+  // 這樣請求回傳時系統狀態已經確定，使用者立刻點開信中的連結也不會撲空。
+  if (email) {
+    await sendVerificationEmail(participant.id, new URL(req.url).origin);
+  }
 
   // 回應中不含 sessionToken——它只存在於 HttpOnly cookie 裡。
   return NextResponse.json(

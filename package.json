@@ -15,7 +15,8 @@
     "db:generate": "prisma generate",
     "tunnel": "cloudflared tunnel --url http://localhost:3000",
     "smoke": "node scripts/smoke.mts",
-    "test": "node --test --test-concurrency=1 tests/**/*.test.mts"
+    "test": "node --test --test-concurrency=1 tests/**/*.test.mts",
+    "rehearsal": "node scripts/rehearsal.mts"
   },
   "repository": {
     "type": "git",

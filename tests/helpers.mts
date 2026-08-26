@@ -18,6 +18,9 @@ export async function resetParticipants(): Promise<void> {
   // 外鍵皆為 cascade，刪除 Participant 會一併清掉 Scan、Collection、
   // Impression、ShowcaseSlot 與 AchievementEarned。
   await prisma.participant.deleteMany({});
+  // Announcement 掛在 Event 而非 Participant 上，不會被上面的 cascade 清掉。
+  // 若留著，前一個測試發布的公告會讓後續測試的未讀數對不上。
+  await prisma.announcement.deleteMany({});
 }
 
 export async function disconnect(): Promise<void> {

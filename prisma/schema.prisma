@@ -294,4 +294,20 @@ model Admin {
   username     String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+
+  sessions AdminSession[]
+}
+
+/// 獨立成表而非存在 Admin 上，讓同一位管理員能同時從多個裝置登入，
+/// 並且能單獨撤銷其中一個工作階段。
+model AdminSession {
+  id        String   @id @default(cuid())
+  adminId   String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
 }

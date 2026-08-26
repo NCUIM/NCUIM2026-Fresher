@@ -5,14 +5,16 @@ import QRCode from "qrcode";
 import { getCurrentParticipant } from "@/lib/session";
 import { iconByKey } from "@/lib/icons";
 import { computeScore, pendingImpressions } from "@/lib/score";
+import { listAnnouncements } from "@/lib/announcements";
 
 export default async function MePage() {
   const me = await getCurrentParticipant();
   if (!me) redirect("/");
 
-  const [score, pending] = await Promise.all([
+  const [score, pending, announcements] = await Promise.all([
     computeScore(me.id),
     pendingImpressions(me.id),
+    listAnnouncements(me.eventId, me.id),
   ]);
 
   // QR Code 內容是一組網址而非純代碼——這讓手機原生相機也能完成收集，
@@ -94,6 +96,11 @@ export default async function MePage() {
           <NavTile href="/leaderboard" label="排行榜" />
           <NavTile href="/wall" label="大家眼中的你" />
           <NavTile href="/showcase" label="我的九宮格" />
+          <NavTile
+            href="/announcements"
+            label="活動公告"
+            badge={announcements.unreadCount}
+          />
         </div>
       </nav>
 
@@ -102,13 +109,26 @@ export default async function MePage() {
   );
 }
 
-function NavTile({ href, label }: { href: string; label: string }) {
+function NavTile({
+  href,
+  label,
+  badge = 0,
+}: {
+  href: string;
+  label: string;
+  badge?: number;
+}) {
   return (
     <Link
       href={href}
-      className="tap-target flex items-center justify-center rounded-lg border border-gray-300 py-3 text-center text-sm font-medium"
+      className="tap-target relative flex items-center justify-center rounded-lg border border-gray-300 py-3 text-center text-sm font-medium"
     >
       {label}
+      {badge > 0 && (
+        <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }

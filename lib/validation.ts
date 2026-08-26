@@ -5,6 +5,13 @@ export const NICKNAME_MAX = 20;
 export const BIO_MAX = 50;
 export const IMPRESSION_MAX = 50;
 
+/**
+ * 九宮格格數。放在這裡而不是 lib/showcase.ts，是因為 client component
+ * 需要用到它——而 lib/showcase.ts 匯入了 Prisma，從前端取值匯入會把
+ * 整個資料庫驅動打包進瀏覽器套件，建置時就會因為找不到 net/dns/fs 而失敗。
+ */
+export const SHOWCASE_SIZE = 9;
+
 /** 只接受 https，避免在卡片上放出混合內容或不安全連結。 */
 const httpsUrl = z
   .string()

@@ -39,3 +39,48 @@ select {
   min-width: 44px;
   min-height: 44px;
 }
+
+/* ---------------------------------------------------------------
+   漂浮牆
+   --------------------------------------------------------------- */
+
+.wall-field {
+  /* 卡片以絕對定位散布，容器需要自己的定位脈絡與最小高度 */
+  min-height: 60dvh;
+  overflow: hidden;
+}
+
+.wall-card {
+  /* 只動 transform 與 opacity——改 top/left 會觸發版面重排，
+     數十張卡片同時漂浮時手機會明顯掉幀。 */
+  animation: wall-drift var(--drift-duration, 11s) ease-in-out infinite alternate;
+  animation-delay: var(--drift-delay, 0s);
+  will-change: transform;
+}
+
+@keyframes wall-drift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(-1.5deg);
+  }
+  to {
+    transform: translate3d(6%, -8%, 0) rotate(1.5deg);
+  }
+}
+
+/*
+  滿版緩慢漂移的內容可能讓前庭功能敏感的使用者不適。
+  在系統設定要求減少動態時改為靜態排列，而不是只把速度放慢。
+*/
+@media (prefers-reduced-motion: reduce) {
+  .wall-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: visible;
+  }
+  .wall-card {
+    position: static !important;
+    max-width: 100% !important;
+    animation: none;
+  }
+}

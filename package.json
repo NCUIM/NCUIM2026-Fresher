@@ -13,7 +13,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "tunnel": "cloudflared tunnel --url http://localhost:3000",
+    "tunnel": "ngrok http 3000",
     "smoke": "node scripts/smoke.mts",
     "test": "node --test --test-concurrency=1 tests/**/*.test.mts",
     "rehearsal": "node scripts/rehearsal.mts"

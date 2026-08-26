@@ -1,10 +1,38 @@
-export default function Home() {
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getCurrentParticipant } from "@/lib/session";
+
+export default async function Home() {
+  // 已報到者直接進入自己的頁面。活動當天多數人是從書籤或歷史紀錄回來的，
+  // 讓他們再看一次說明頁沒有意義。
+  const me = await getCurrentParticipant();
+  if (me) redirect("/me");
+
+  const event = await prisma.event.findFirst({
+    where: { status: "ACTIVE" },
+    orderBy: { createdAt: "desc" },
+    select: { name: true },
+  });
+
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6">
-      <h1 className="text-2xl font-bold">卡片收集</h1>
-      <p className="text-center text-sm text-gray-500">
-        專案骨架已建立。請由 Entry Code 進入報到流程。
-      </p>
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
+      <h1 className="text-2xl font-bold">
+        {event?.name ?? "卡片收集"}
+      </h1>
+
+      {event ? (
+        <>
+          <p className="text-sm text-gray-600">
+            請掃描主辦方提供的<strong>報到 QR Code</strong> 開始。
+          </p>
+          <p className="text-xs text-gray-400">
+            如果你已經報到過但看到這個畫面，可能是瀏覽器資料被清除了。
+            請向現場工作人員說明，他們可以協助你找回身分。
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-gray-500">目前沒有進行中的活動。</p>
+      )}
     </main>
   );
 }

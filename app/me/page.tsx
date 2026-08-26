@@ -28,6 +28,18 @@ export default async function MePage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
       <header className="flex flex-col items-center gap-2">
+        {me.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={me.avatarUrl}
+            alt=""
+            className="size-20 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex size-20 items-center justify-center rounded-full bg-gray-100 text-2xl text-gray-400">
+            {me.nickname.slice(0, 1)}
+          </div>
+        )}
         <h1 className="text-2xl font-bold">{me.nickname}</h1>
         <div className="flex flex-wrap items-center justify-center gap-2">
           {me.role === "STAFF" && (
@@ -47,6 +59,9 @@ export default async function MePage() {
           ))}
         </div>
         {me.bio && <p className="text-center text-sm text-gray-600">{me.bio}</p>}
+        <Link href="/profile" className="text-xs text-gray-400 underline">
+          編輯個人資料
+        </Link>
       </header>
 
       <Link

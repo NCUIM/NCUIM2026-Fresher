@@ -41,6 +41,12 @@ export async function POST(
   }
   const { clearAvatar, clearBio, clearSocialUrl, nickname } = parsed.data;
 
+  // 清除頭像時連影像本體一起刪掉，否則 /api/avatar/{id} 仍取得到那張圖，
+  // 「移除」就只是把它從畫面上藏起來而已。
+  if (clearAvatar) {
+    await prisma.avatar.deleteMany({ where: { participantId: id } });
+  }
+
   const updated = await prisma.participant.update({
     where: { id },
     data: {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
+import { firstErrorMessage, profileSchema } from "@/lib/validation";
 import { computeScore, pendingImpressions } from "@/lib/score";
 import { evaluateAchievements, getAchievementStatus } from "@/lib/achievements";
 
@@ -24,10 +26,56 @@ export async function GET() {
     id: me.id,
     nickname: me.nickname,
     role: me.role,
+    avatarUrl: me.avatarUrl,
+    bio: me.bio,
+    socialUrl: me.socialUrl,
+    icons: me.icons,
     personalCode: me.personalCode,
     team: me.team ? { number: me.team.number, name: me.team.name } : null,
     score,
     pendingImpressions: pending,
     achievements,
   });
+}
+
+/**
+ * 修改自己的 Profile。
+ *
+ * 因為 Card 即時引用 Profile 而非快照，這裡的修改會立刻反映到所有
+ * 收集過此人的參與者手上——打錯的暱稱不會永遠留在別人的清單裡。
+ */
+export async function PUT(req: Request) {
+  const me = await getCurrentParticipant();
+  if (!me) {
+    return NextResponse.json({ error: "請先完成報到" }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "請求格式錯誤" }, { status: 400 });
+  }
+
+  const parsed = profileSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: firstErrorMessage(parsed.error) },
+      { status: 400 },
+    );
+  }
+  const { nickname, socialUrl, bio, icons } = parsed.data;
+
+  const updated = await prisma.participant.update({
+    where: { id: me.id },
+    data: {
+      nickname,
+      socialUrl: socialUrl ?? null,
+      bio: bio ?? null,
+      icons,
+    },
+    select: { nickname: true, socialUrl: true, bio: true, icons: true },
+  });
+
+  return NextResponse.json(updated);
 }

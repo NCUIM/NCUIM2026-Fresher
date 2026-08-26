@@ -100,6 +100,7 @@ model Participant {
 
   event               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   team                Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  avatar              Avatar?
   scansInitiated      Scan[]              @relation("ScanInitiator")
   scansReceived       Scan[]              @relation("ScanTarget")
   collections         Collection[]        @relation("CollectionOwner")
@@ -113,6 +114,24 @@ model Participant {
 
   @@index([eventId])
   @@index([teamId])
+}
+
+/// 頭像影像本體。
+///
+/// 獨立成表而非放在 Participant 上的欄位：Bytes 欄位會被一般查詢一併載入，
+/// 而參與者清單、收集清單這類查詢每次都會撈出數十筆——把影像塞在同一張表
+/// 等於每次列表都搬運幾 MB 的二進位資料。
+///
+/// 選擇存資料庫而非物件儲存的關鍵原因是保留期：十四天到期刪除 Participant 時，
+/// cascade 會連影像一起清掉。放在外部儲存則需另寫清除程序，而漏刪的頭像
+/// 就是殘留的個人資料。
+model Avatar {
+  participantId String   @id
+  contentType   String
+  data          Bytes
+  updatedAt     DateTime @updatedAt
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 /// 由系統於報到時輪流指派（第一階段唯一模式）。

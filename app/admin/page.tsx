@@ -7,6 +7,11 @@ export default async function AdminPage() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
+  const event = await prisma.event.findFirst({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    select: { name: true, status: true },
+  });
+
   const participants = await prisma.participant.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -34,7 +39,11 @@ export default async function AdminPage() {
         <span className="text-sm text-gray-500">{admin.username}</span>
       </header>
 
-      <AdminDashboard initial={participants} />
+      <AdminDashboard
+        initial={participants}
+        eventName={event?.name ?? "（無活動）"}
+        archived={event?.status === "ARCHIVED"}
+      />
     </main>
   );
 }

@@ -17,8 +17,17 @@ type Participant = {
   };
 };
 
-export function AdminDashboard({ initial }: { initial: Participant[] }) {
+export function AdminDashboard({
+  initial,
+  eventName,
+  archived,
+}: {
+  initial: Participant[];
+  eventName: string;
+  archived: boolean;
+}) {
   const [participants, setParticipants] = useState(initial);
+  const [isArchived, setIsArchived] = useState(archived);
   const [announcement, setAnnouncement] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [rescue, setRescue] = useState<{ nickname: string; url: string } | null>(null);
@@ -65,8 +74,35 @@ export function AdminDashboard({ initial }: { initial: Participant[] }) {
     setNotice(`已清除 ${p.nickname} 的違規內容`);
   }
 
+  async function archive() {
+    if (
+      !confirm(
+        `確定要封存「${eventName}」？\n\n` +
+          "封存後所有人都無法再報到或收集，但仍可查看已收集的成果。\n" +
+          "這個動作沒有提供還原按鈕。",
+      )
+    )
+      return;
+    const res = await fetch("/api/admin/archive", { method: "POST" });
+    if (!res.ok) {
+      setNotice("封存失敗");
+      return;
+    }
+    const data = await res.json();
+    setIsArchived(true);
+    setNotice(
+      `活動已封存。資料將保留至 ${new Date(data.purgeAfter).toLocaleDateString("zh-TW")}。`,
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {isArchived && (
+        <p className="rounded-lg bg-gray-900 px-4 py-3 text-sm text-white">
+          這場活動已封存。報到與收集皆已關閉，查看功能維持可用。
+        </p>
+      )}
+
       <section className="flex flex-col gap-2">
         <h2 className="font-medium">發布公告</h2>
         <textarea
@@ -106,6 +142,18 @@ export function AdminDashboard({ initial }: { initial: Participant[] }) {
             關閉
           </button>
         </div>
+      )}
+
+      {!isArchived && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-medium">結束活動</h2>
+          <button
+            onClick={archive}
+            className="tap-target rounded-lg border border-red-300 py-3 text-sm font-medium text-red-700"
+          >
+            封存「{eventName}」
+          </button>
+        </section>
       )}
 
       <section className="flex flex-col gap-2">

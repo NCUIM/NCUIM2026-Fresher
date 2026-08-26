@@ -44,6 +44,13 @@ export async function setLeaderboardTopN(n: number): Promise<void> {
   await prisma.event.updateMany({ data: { leaderboardTopN: n } });
 }
 
+/** 把活動還原為進行中，避免封存測試影響後續測試。 */
+export async function reactivateEvents(): Promise<void> {
+  await prisma.event.updateMany({
+    data: { status: "ACTIVE", archivedAt: null, purgeAfter: null },
+  });
+}
+
 /** 還原種子設定，避免修改過的門檻影響後續測試。 */
 export async function restoreAchievementThresholds(): Promise<void> {
   const { DEFAULT_ACHIEVEMENTS } = await import("../lib/achievements.config.ts");

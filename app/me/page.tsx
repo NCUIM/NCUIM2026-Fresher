@@ -89,12 +89,20 @@ export default async function MePage() {
         >
           掃描收集
         </Link>
-        <Link
-          href="/collection"
-          className="tap-target flex items-center justify-center rounded-lg border border-gray-300 py-3 font-medium"
-        >
-          收集清單
-        </Link>
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            href="/collection"
+            className="tap-target flex items-center justify-center rounded-lg border border-gray-300 py-3 font-medium"
+          >
+            收集清單
+          </Link>
+          <Link
+            href="/leaderboard"
+            className="tap-target flex items-center justify-center rounded-lg border border-gray-300 py-3 font-medium"
+          >
+            排行榜
+          </Link>
+        </div>
       </nav>
 
       <p className="text-center text-xs text-gray-400">{me.event.name}</p>

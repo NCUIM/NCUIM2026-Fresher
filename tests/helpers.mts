@@ -36,6 +36,11 @@ export async function setAchievementThreshold(
   await prisma.achievementDef.updateMany({ where: { key }, data: { threshold } });
 }
 
+/** 調整排行榜公開名次數，用於驗證「只回傳前 N 名」。 */
+export async function setLeaderboardTopN(n: number): Promise<void> {
+  await prisma.event.updateMany({ data: { leaderboardTopN: n } });
+}
+
 /** 還原種子設定，避免修改過的門檻影響後續測試。 */
 export async function restoreAchievementThresholds(): Promise<void> {
   const { DEFAULT_ACHIEVEMENTS } = await import("../lib/achievements.config.ts");

@@ -24,6 +24,29 @@ export async function disconnect(): Promise<void> {
   await prisma.$disconnect();
 }
 
+/**
+ * 調整成就門檻，模擬 Admin 在活動進行中修改設定。
+ * 第一階段的成就定義來自設定檔、沒有後台 API，因此只能由此處直接改寫；
+ * 這是測試的「安排」步驟，不是斷言——斷言一律走 HTTP API。
+ */
+export async function setAchievementThreshold(
+  key: string,
+  threshold: number,
+): Promise<void> {
+  await prisma.achievementDef.updateMany({ where: { key }, data: { threshold } });
+}
+
+/** 還原種子設定，避免修改過的門檻影響後續測試。 */
+export async function restoreAchievementThresholds(): Promise<void> {
+  const { DEFAULT_ACHIEVEMENTS } = await import("../lib/achievements.config.ts");
+  for (const a of DEFAULT_ACHIEVEMENTS) {
+    await prisma.achievementDef.updateMany({
+      where: { key: a.key },
+      data: { threshold: a.threshold },
+    });
+  }
+}
+
 /** 開發伺服器沒開時給出明確訊息，而不是一堆 fetch failed。 */
 export async function requireServer(): Promise<void> {
   try {

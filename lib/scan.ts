@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { pairKeyFor } from "./codes";
 import { toCardView, type CardView } from "./cards";
+import { evaluateAchievements } from "./achievements";
 
 export type ScanFailure =
   | "self"
@@ -85,6 +86,13 @@ export async function performScan(
         ],
       });
     });
+
+    // 雙方都要評估：發起者的主動掃描數增加，被掃者的被收集數也增加。
+    // 發放是冪等的，失敗不應讓收集本身失敗——收集已經成立了。
+    await Promise.all([
+      evaluateAchievements(scanner.id).catch(() => undefined),
+      evaluateAchievements(target.id).catch(() => undefined),
+    ]);
 
     return { ok: true, duplicate: false, card };
   } catch (e) {

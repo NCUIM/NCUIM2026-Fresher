@@ -29,8 +29,15 @@ export async function computeScore(
     where: { authorId: participantId },
   });
 
+  const earned = await prisma.achievementEarned.aggregate({
+    where: { participantId },
+    _sum: { pointsAwarded: true },
+  });
+
   const base = credited * participant.event.basePoints;
-  const achievement = 0; // 成就引擎尚未實作
+  // 使用達成當下凍結的 pointsAwarded，而非成就定義的當前分值——
+  // 定義變更不得影響已達成者（ADR-0002）。
+  const achievement = earned._sum.pointsAwarded ?? 0;
 
   return { base, achievement, total: base + achievement };
 }

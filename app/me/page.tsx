@@ -47,10 +47,13 @@ export default async function MePage() {
         {me.bio && <p className="text-center text-sm text-gray-600">{me.bio}</p>}
       </header>
 
-      <section className="flex items-center justify-center gap-1 rounded-2xl bg-gray-900 py-4 text-white">
+      <Link
+        href="/achievements"
+        className="flex items-center justify-center gap-1 rounded-2xl bg-gray-900 py-4 text-white"
+      >
         <span className="text-3xl font-bold">{score.total}</span>
         <span className="self-end pb-1 text-sm text-gray-300">分</span>
-      </section>
+      </Link>
 
       {pending.length > 0 && (
         <Link

@@ -39,7 +39,7 @@ export default async function Home() {
         </div>
 
         <Link
-          href="/join"
+          href="/scan"
           className="tap-target flex w-full items-center justify-center rounded-lg bg-gray-900 py-3.5 font-medium text-white"
         >
           掃描報到碼

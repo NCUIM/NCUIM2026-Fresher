@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
     "*.ngrok.io",
     "*.trycloudflare.com",
   ],
+
+  // Next 的開發指示器（畫面角落那個 N）在手機上會蓋住介面，
+  // 實機測試時很干擾。關閉它不影響錯誤回報——編譯與執行期的錯誤
+  // 仍會照常顯示。想看路由是靜態還是動態時，改用 next build 的輸出。
+  devIndicators: false,
 };
 
 export default nextConfig;

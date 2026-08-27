@@ -28,7 +28,9 @@ services:
   ngrok:
     image: ngrok/ngrok:latest
     profiles: ["tunnel"]
-    command: http host.docker.internal:3000 --log stdout
+    # 預設指向 3000（開發伺服器）。要改指 3001（測試伺服器）時
+    # 用 npm run tunnel:test，或自行設定 TUNNEL_PORT。
+    command: http host.docker.internal:${TUNNEL_PORT:-3000} --log stdout
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?請先在 .env 設定 NGROK_AUTHTOKEN（到 ngrok.com 註冊免費帳號取得）}
     ports:

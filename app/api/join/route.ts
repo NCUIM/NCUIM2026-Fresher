@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/origin";
 import { prisma } from "@/lib/prisma";
 import { generatePersonalCode, generateSessionToken } from "@/lib/codes";
 import { setSessionCookie } from "@/lib/session";
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
   // 等待權杖建立完成（只有 SMTP 呼叫在背景進行），
   // 這樣請求回傳時系統狀態已經確定，使用者立刻點開信中的連結也不會撲空。
   if (email) {
-    await sendVerificationEmail(participant.id, new URL(req.url).origin);
+    await sendVerificationEmail(participant.id, await getPublicOrigin());
   }
 
   // 回應中不含 sessionToken——它只存在於 HttpOnly cookie 裡。

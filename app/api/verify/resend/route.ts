@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/origin";
 import { getCurrentParticipant } from "@/lib/session";
 import { sendVerificationEmail } from "@/lib/send-verification";
 
@@ -15,6 +16,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "信箱已經驗證過了" }, { status: 409 });
   }
 
-  await sendVerificationEmail(me.id, new URL(req.url).origin);
+  await sendVerificationEmail(me.id, await getPublicOrigin());
   return NextResponse.json({ ok: true });
 }

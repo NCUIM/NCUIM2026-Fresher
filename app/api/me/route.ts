@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/origin";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { firstErrorMessage, profileSchema } from "@/lib/validation";
@@ -97,7 +98,7 @@ export async function PUT(req: Request) {
   });
 
   if (emailChanged && email) {
-    await sendVerificationEmail(me.id, new URL(req.url).origin);
+    await sendVerificationEmail(me.id, await getPublicOrigin());
   }
 
   return NextResponse.json(updated);

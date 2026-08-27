@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/origin";
 import { findRecoverable, issueToken } from "@/lib/recovery";
 import { recoveryBody, sendMail } from "@/lib/mailer";
 import { recoveryRequestSchema } from "@/lib/validation";
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
         subject: "找回你的收集成果",
         text: recoveryBody(
           participant.nickname,
-          `${new URL(req.url).origin}/recover/${token}`,
+          `${await getPublicOrigin()}/recover/${token}`,
         ),
       });
     } catch (e) {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicOrigin } from "@/lib/origin";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { generateSessionToken } from "@/lib/codes";
@@ -27,7 +28,7 @@ export async function POST(
   const sessionToken = generateSessionToken();
   await prisma.participant.update({ where: { id }, data: { sessionToken } });
 
-  const origin = new URL(req.url).origin;
+  const origin = await getPublicOrigin();
   return NextResponse.json({
     nickname: participant.nickname,
     rescueUrl: `${origin}/rescue/${sessionToken}`,

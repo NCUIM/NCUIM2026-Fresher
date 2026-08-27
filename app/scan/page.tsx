@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentParticipant } from "@/lib/session";
+import { NavShell } from "@/components/BottomNav";
 import { Scanner } from "./Scanner";
 
 /**
@@ -11,27 +12,36 @@ export default async function ScanPage() {
 
   if (me && me.event.status !== "ACTIVE") {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-2 px-5 text-center">
-        <h1 className="text-lg font-bold">活動已結束</h1>
-        <p className="text-sm text-gray-500">
-          收集功能已關閉，但你仍然可以查看自己的收集成果。
-        </p>
-        <Link href="/me" className="tap-target flex items-center text-sm text-gray-600 underline">
-          回到我的頁面
+      <NavShell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+          <span className="px text-[11px] tracking-[0.2em] text-faint">CLOSED</span>
+          <h1 className="text-xl font-black">活動已結束</h1>
+          <p className="text-sm text-dim">
+            收集功能已關閉，但你仍然可以查看自己的收集成果。
+          </p>
+        </div>
+      </NavShell>
+    );
+  }
+
+  // 未報到者沒有底部導覽（他們還沒有身分，導覽列上的頁面都進不去）
+  if (!me) {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-5 pt-7 pb-[calc(2rem+var(--safe-bottom))]">
+        <Scanner authenticated={false} />
+        <Link
+          href="/"
+          className="tap-target flex items-center justify-center text-sm text-faint"
+        >
+          回到首頁
         </Link>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
-      <Scanner authenticated={me !== null} />
-      <Link
-        href={me ? "/me" : "/"}
-        className="tap-target flex items-center justify-center text-sm text-gray-500"
-      >
-        {me ? "回到我的頁面" : "回到首頁"}
-      </Link>
-    </main>
+    <NavShell>
+      <Scanner authenticated basePoints={me.event.basePoints} />
+    </NavShell>
   );
 }

@@ -137,7 +137,7 @@ export function ProfileEditor({ initial }: Props) {
             className="size-24 rounded-full object-cover"
           />
         ) : (
-          <div className="flex size-24 items-center justify-center rounded-full bg-gray-100 text-3xl text-gray-400">
+          <div className="flex size-24 items-center justify-center rounded-full bg-slate text-3xl text-faint">
             {nickname.slice(0, 1) || "?"}
           </div>
         )}
@@ -158,7 +158,7 @@ export function ProfileEditor({ initial }: Props) {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="tap-target rounded-lg border border-gray-300 px-4 text-sm font-medium disabled:text-gray-300"
+            className="tap-target rounded-lg border border-line px-4 text-sm font-medium disabled:text-faint"
           >
             {uploading ? "處理中…" : avatarUrl ? "換一張" : "上傳頭像"}
           </button>
@@ -166,7 +166,7 @@ export function ProfileEditor({ initial }: Props) {
             <button
               onClick={removeAvatar}
               disabled={uploading}
-              className="tap-target rounded-lg px-4 text-sm text-gray-500"
+              className="tap-target rounded-lg px-4 text-sm text-dim"
             >
               移除
             </button>
@@ -180,14 +180,14 @@ export function ProfileEditor({ initial }: Props) {
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           maxLength={NICKNAME_MAX}
-          className="rounded-lg border border-gray-300 px-3 py-2.5"
+          className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
         />
       </label>
 
       <div className="flex flex-col gap-1.5">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">電子信箱</span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-dim">
             用來在換裝置或瀏覽器資料被清除時找回收集成果
           </span>
           <input
@@ -198,20 +198,20 @@ export function ProfileEditor({ initial }: Props) {
             autoCapitalize="none"
             autoComplete="email"
             placeholder="you@example.com"
-            className="rounded-lg border border-gray-300 px-3 py-2.5"
+            className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
           />
         </label>
 
         {showUnverified && (
-          <div className="flex flex-col gap-1.5 rounded-lg bg-amber-50 px-3 py-2.5">
-            <p className="text-sm text-amber-900">
+          <div className="flex flex-col gap-1.5 rounded-lg bg-moon/10 px-3 py-2.5">
+            <p className="text-sm text-moon">
               這個信箱還沒驗證，目前無法用來找回身分。
             </p>
             <button
               type="button"
               onClick={resendVerification}
               disabled={resending}
-              className="self-start text-sm text-amber-900 underline disabled:text-amber-400"
+              className="self-start text-sm text-moon underline disabled:text-moon/50"
             >
               {resending ? "寄送中…" : "重新寄送驗證信"}
             </button>
@@ -227,14 +227,14 @@ export function ProfileEditor({ initial }: Props) {
           inputMode="url"
           autoCapitalize="none"
           placeholder="https://instagram.com/..."
-          className="rounded-lg border border-gray-300 px-3 py-2.5"
+          className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
         <span className="flex items-center justify-between text-sm font-medium">
           一句話自我介紹
-          <span className="text-xs font-normal text-gray-400">
+          <span className="text-xs font-normal text-faint">
             {bio.length}/{BIO_MAX}
           </span>
         </span>
@@ -242,7 +242,7 @@ export function ProfileEditor({ initial }: Props) {
           value={bio}
           onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
           rows={2}
-          className="resize-none rounded-lg border border-gray-300 px-3 py-2.5"
+          className="resize-none rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
         />
       </label>
 
@@ -267,10 +267,10 @@ export function ProfileEditor({ initial }: Props) {
                 aria-pressed={selected}
                 className={`tap-target flex flex-col items-center gap-0.5 rounded-lg border py-2 ${
                   selected
-                    ? "border-gray-900 bg-gray-900 text-white"
+                    ? "border-neon bg-neon/10 text-neon"
                     : disabled
-                      ? "border-gray-200 text-gray-300"
-                      : "border-gray-300"
+                      ? "border-line text-faint"
+                      : "border-line"
                 }`}
               >
                 <span className="text-xl">{icon.emoji}</span>
@@ -282,12 +282,12 @@ export function ProfileEditor({ initial }: Props) {
       </fieldset>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-lg bg-flare/15 px-3 py-2 text-sm text-flare">
           {error}
         </p>
       )}
       {notice && (
-        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="rounded-lg bg-neon/10 px-3 py-2 text-sm text-neon">
           {notice}
         </p>
       )}
@@ -295,7 +295,7 @@ export function ProfileEditor({ initial }: Props) {
       <button
         onClick={save}
         disabled={saving || !iconsComplete || !nickname.trim()}
-        className="tap-target sticky bottom-[var(--safe-bottom)] rounded-lg bg-gray-900 py-3 font-medium text-white disabled:bg-gray-300"
+        className="tap-target sticky bottom-[var(--safe-bottom)] rounded-lg bg-neon py-3 font-medium text-void disabled:bg-line"
       >
         {saving ? "儲存中…" : "儲存"}
       </button>

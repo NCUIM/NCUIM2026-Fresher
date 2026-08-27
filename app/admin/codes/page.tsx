@@ -25,7 +25,7 @@ export default async function AdminCodesPage() {
     return (
       <main className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center gap-2 px-5 text-center">
         <h1 className="text-lg font-bold">沒有進行中的活動</h1>
-        <Link href="/admin" className="text-sm text-gray-600 underline">
+        <Link href="/admin" className="text-sm text-dim underline">
           回到後台
         </Link>
       </main>
@@ -51,12 +51,12 @@ export default async function AdminCodesPage() {
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
       <header className="flex flex-col gap-1">
         <h1 className="text-xl font-bold">報到 QR Code</h1>
-        <p className="text-sm text-gray-500">{event.name}</p>
+        <p className="text-sm text-dim">{event.name}</p>
       </header>
 
-      <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <div className="rounded-xl bg-moon/10 px-4 py-3 text-sm text-moon">
         <p className="font-medium">投影或列印前請確認網址</p>
-        <p className="mt-1 text-amber-800">
+        <p className="mt-1 text-moon/80">
           QR 內容取自目前的連線網址（<span className="font-mono">{host}</span>）。
           若你現在是透過隧道或本機位址存取，印出來的碼在活動當天會連不到。
           請在<strong>正式網址</strong>底下開啟這一頁再列印。
@@ -67,12 +67,12 @@ export default async function AdminCodesPage() {
         {codes.map((c) => (
           <section
             key={c.id}
-            className="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 p-6"
+            className="flex flex-col items-center gap-3 rounded-2xl border border-line p-6"
           >
             <div className="flex flex-col items-center gap-1">
               <h2 className="text-lg font-bold">{c.label ?? "報到碼"}</h2>
               {c.role === "STAFF" && (
-                <span className="rounded-full bg-amber-500 px-3 py-0.5 text-xs font-medium text-white">
+                <span className="rounded-full bg-moon px-3 py-0.5 text-xs font-medium text-void">
                   請勿公開張貼
                 </span>
               )}
@@ -86,19 +86,19 @@ export default async function AdminCodesPage() {
             />
 
             <p className="font-mono text-lg tracking-[0.2em]">{c.code}</p>
-            <p className="text-center text-xs break-all text-gray-400">{c.url}</p>
+            <p className="text-center text-xs break-all text-faint">{c.url}</p>
           </section>
         ))}
       </div>
 
-      <p className="text-center text-xs text-gray-500">
+      <p className="text-center text-xs text-dim">
         通關碼為 <span className="font-mono">{event.passcode}</span>，
         請於現場口頭或投影公布，不要印在 QR Code 旁邊。
       </p>
 
       <Link
         href="/admin"
-        className="tap-target flex items-center justify-center text-sm text-gray-500"
+        className="tap-target flex items-center justify-center text-sm text-dim"
       >
         回到後台
       </Link>

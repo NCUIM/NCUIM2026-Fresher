@@ -56,38 +56,35 @@ export function ShowcaseEditor({
 
   return (
     <div className="flex flex-col gap-5">
+      {/* 空格用點陣序號填滿，本身就像一副等待集齊的卡冊 */}
       <div className="grid grid-cols-3 gap-2">
         {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {
           const person = selected[i] ? byId.get(selected[i]) : null;
           return (
             <div
               key={i}
-              className={`flex aspect-square items-center justify-center rounded-xl text-center text-xs ${
+              className={`grid aspect-square place-items-center rounded-lg p-1 text-center text-xs leading-tight ${
                 person
-                  ? "bg-gray-900 text-white"
-                  : "border border-dashed border-gray-300 text-gray-300"
+                  ? "border border-neon bg-slate text-neon"
+                  : "px border border-dashed border-line text-faint"
               }`}
             >
-              {person ? (
-                <span className="line-clamp-2 px-1">{person.nickname}</span>
-              ) : (
-                i + 1
-              )}
+              {person ? person.nickname : String(i + 1).padStart(2, "0")}
             </div>
           );
         })}
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="flex items-center justify-between text-sm font-medium">
+        <p className="flex items-center justify-between text-sm font-bold">
           <span>從收集到的人裡挑選</span>
-          <span className={full ? "text-xs text-amber-600" : "text-xs text-gray-400"}>
+          <span className={`px text-xs ${full ? "text-moon" : "text-faint"}`}>
             {selected.length}/{SHOWCASE_SIZE}
           </span>
         </p>
 
         {candidates.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-500">
+          <p className="rounded-xl border border-dashed border-line py-8 text-center text-sm text-faint">
             還沒有收集到任何人。
           </p>
         ) : (
@@ -101,16 +98,16 @@ export function ShowcaseEditor({
                     onClick={() => toggle(c.id)}
                     disabled={disabled}
                     aria-pressed={picked}
-                    className={`tap-target flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left ${
+                    className={`tap-target flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left ${
                       picked
-                        ? "bg-gray-900 text-white"
+                        ? "border-neon bg-neon/10 text-neon"
                         : disabled
-                          ? "border border-gray-100 text-gray-300"
-                          : "border border-gray-200"
+                          ? "border-line/50 text-faint"
+                          : "border-line text-chalk"
                     }`}
                   >
                     <span className="flex-1 truncate">{c.nickname}</span>
-                    <span className="text-sm">{picked ? "✓" : "＋"}</span>
+                    <span className="px text-sm">{picked ? "✓" : "＋"}</span>
                   </button>
                 </li>
               );
@@ -120,20 +117,18 @@ export function ShowcaseEditor({
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-lg bg-flare/15 px-3 py-2 text-sm text-flare">
           {error}
         </p>
       )}
       {message && (
-        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          {message}
-        </p>
+        <p className="rounded-lg bg-neon/10 px-3 py-2 text-sm text-neon">{message}</p>
       )}
 
       <button
         onClick={save}
         disabled={saving}
-        className="tap-target sticky bottom-[var(--safe-bottom)] rounded-lg bg-gray-900 py-3 font-medium text-white disabled:bg-gray-300"
+        className="tap-target glow-neon rounded-sm bg-neon py-3 font-bold text-void disabled:bg-line disabled:text-faint disabled:shadow-none"
       >
         {saving ? "儲存中…" : "儲存九宮格"}
       </button>

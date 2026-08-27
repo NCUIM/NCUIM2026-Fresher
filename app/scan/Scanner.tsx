@@ -4,11 +4,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import type { CardView } from "@/lib/cards";
 import { extractEntryCode, extractPersonalCode } from "@/lib/parse-code";
-import { CardDisplay } from "@/components/CardDisplay";
+import { CollectReveal } from "@/components/CollectReveal";
 import { QrCamera } from "@/components/QrCamera";
 
 type Result =
-  | { kind: "collected"; card: CardView; duplicate: boolean }
+  | { kind: "collected"; card: CardView; duplicate: boolean; points?: number }
   | { kind: "message"; title: string; body: string };
 
 /**
@@ -17,29 +17,51 @@ type Result =
  * 使用者不該需要先判斷自己面前是哪一種 QR，再決定按哪個按鈕——
  * 掃到的內容本身就足以決定要做什麼，判斷交給程式而不是人。
  */
-export function Scanner({ authenticated }: { authenticated: boolean }) {
+export function Scanner({
+  authenticated,
+  basePoints,
+}: {
+  authenticated: boolean;
+  basePoints?: number;
+}) {
   const router = useRouter();
   const [result, setResult] = useState<Result | null>(null);
   const [manual, setManual] = useState("");
 
-  const collect = useCallback(async (personalCode: string) => {
-    try {
-      const res = await fetch("/api/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personalCode }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setResult({ kind: "message", title: "無法收集", body: data.error ?? "收集失敗" });
-        return;
+  const collect = useCallback(
+    async (personalCode: string) => {
+      try {
+        const res = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ personalCode }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setResult({
+            kind: "message",
+            title: "無法收集",
+            body: data.error ?? "收集失敗",
+          });
+          return;
+        }
+        setResult({
+          kind: "collected",
+          card: data.card,
+          duplicate: data.duplicate,
+          points: data.duplicate ? undefined : basePoints,
+        });
+        if (navigator.vibrate) navigator.vibrate(data.duplicate ? 40 : [40, 60, 40]);
+      } catch {
+        setResult({
+          kind: "message",
+          title: "無法收集",
+          body: "連線失敗，請確認網路",
+        });
       }
-      setResult({ kind: "collected", card: data.card, duplicate: data.duplicate });
-      if (navigator.vibrate) navigator.vibrate(data.duplicate ? 40 : [40, 60, 40]);
-    } catch {
-      setResult({ kind: "message", title: "無法收集", body: "連線失敗，請確認網路" });
-    }
-  }, []);
+    },
+    [basePoints],
+  );
 
   /** 依掃到的內容分派。回傳 true 代表已處理，相機暫停。 */
   const dispatch = useCallback(
@@ -98,33 +120,25 @@ export function Scanner({ authenticated }: { authenticated: boolean }) {
 
   if (result) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-center text-xl font-bold">
-          {result.kind === "message"
-            ? result.title
-            : result.duplicate
-              ? "你已經收集過這個人了"
-              : "收集成功！"}
-        </h1>
-
+      <div className="flex flex-col gap-5">
         {result.kind === "message" ? (
-          <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            {result.body}
-          </p>
-        ) : (
           <>
-            {result.duplicate && (
-              <p className="text-center text-sm text-gray-500">
-                重複掃描不會增加分數。
-              </p>
-            )}
-            <CardDisplay card={result.card} />
+            <h1 className="text-center text-xl font-black">{result.title}</h1>
+            <p className="rounded-xl border border-moon/40 bg-moon/10 px-4 py-3 text-sm text-moon">
+              {result.body}
+            </p>
           </>
+        ) : (
+          <CollectReveal
+            card={result.card}
+            duplicate={result.duplicate}
+            points={result.points}
+          />
         )}
 
         <button
           onClick={() => setResult(null)}
-          className="tap-target rounded-lg bg-gray-900 py-3 font-medium text-white"
+          className="tap-target glow-neon rounded-sm bg-neon py-3 font-bold text-void"
         >
           繼續掃描
         </button>
@@ -135,10 +149,13 @@ export function Scanner({ authenticated }: { authenticated: boolean }) {
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold">
+        <span className="px text-[11px] tracking-[0.2em] text-neon">
+          {authenticated ? "COLLECT" : "CHECK IN"}
+        </span>
+        <h1 className="text-xl font-black">
           {authenticated ? "掃描收集" : "掃描報到碼"}
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-dim">
           {authenticated
             ? "對準對方的個人 QR Code。"
             : "對準主辦方投影或張貼的報到 QR Code。"}
@@ -154,8 +171,8 @@ export function Scanner({ authenticated }: { authenticated: boolean }) {
         }
       />
 
-      <details className="rounded-lg border border-gray-200 px-4 py-3">
-        <summary className="cursor-pointer text-sm font-medium">
+      <details className="rounded-xl border border-line bg-night px-4 py-3">
+        <summary className="cursor-pointer text-sm font-medium text-dim">
           掃不到？改用手動輸入
         </summary>
         <div className="mt-3 flex gap-2">
@@ -165,11 +182,11 @@ export function Scanner({ authenticated }: { authenticated: boolean }) {
             placeholder={authenticated ? "對方卡片下方的代碼" : "例如 JOINNCU1"}
             autoCapitalize="characters"
             autoComplete="off"
-            className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2.5"
+            className="px min-w-0 flex-1 rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
           />
           <button
             onClick={submitManual}
-            className="tap-target rounded-lg bg-gray-900 px-4 font-medium text-white"
+            className="tap-target rounded-sm border border-neon px-4 font-bold text-neon"
           >
             前往
           </button>

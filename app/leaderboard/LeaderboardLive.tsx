@@ -33,6 +33,14 @@ export function LeaderboardLive({
 
   const meInTop = board.top.some((e) => e.participantId === meId);
 
+  if (board.top.length === 0) {
+    return (
+      <p className="py-12 text-center text-sm text-dim">
+        還沒有人上榜，去掃描收集吧
+      </p>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <ol className="flex flex-col gap-2">
@@ -50,7 +58,9 @@ export function LeaderboardLive({
 
       {board.me && !meInTop && (
         <div className="flex flex-col gap-2">
-          <p className="text-center text-xs text-gray-400">你的名次</p>
+          <p className="px text-center text-[10px] tracking-[0.2em] text-faint">
+            YOUR RANK
+          </p>
           <Row
             rank={board.me.rank}
             nickname={board.me.nickname}
@@ -58,12 +68,6 @@ export function LeaderboardLive({
             highlight
           />
         </div>
-      )}
-
-      {board.top.length === 0 && (
-        <p className="py-12 text-center text-sm text-gray-500">
-          還沒有人上榜，去掃描收集吧！
-        </p>
       )}
     </div>
   );
@@ -80,19 +84,23 @@ function Row({
   score: number;
   highlight: boolean;
 }) {
-  const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
+  // 前三名用月光琥珀，其餘維持暗色——榜首該發光，但不搶走霓虹的職責。
+  const rankColor =
+    rank === 1 ? "text-moon text-glow-moon" : rank <= 3 ? "text-moon" : "text-faint";
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
-        highlight ? "bg-gray-900 text-white" : "border border-gray-200"
+      className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+        highlight
+          ? "border-neon bg-neon/10 text-neon"
+          : "border-line bg-night"
       }`}
     >
-      <span className="w-7 text-center text-sm tabular-nums">
-        {medal ?? rank}
+      <span className={`px w-7 text-center text-sm ${highlight ? "" : rankColor}`}>
+        {String(rank).padStart(2, "0")}
       </span>
       <span className="min-w-0 flex-1 truncate font-medium">{nickname}</span>
-      <span className="text-sm tabular-nums">{score}</span>
+      <span className="px text-sm">{score}</span>
     </div>
   );
 }

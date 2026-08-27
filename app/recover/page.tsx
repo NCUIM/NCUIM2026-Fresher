@@ -48,12 +48,12 @@ function RecoverForm() {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-4xl">📮</p>
-        <h1 className="text-xl font-bold">信寄出了</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-xl font-black text-neon">信寄出了</h1>
+        <p className="text-sm text-dim">
           如果這個信箱有已驗證的報到紀錄，找回連結已經寄過去了。
           連結只能用一次，30 分鐘後失效。
         </p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-faint">
           沒收到信？可能是報到時沒填信箱、填錯了，或是沒點過驗證信。
           這種情況請直接找現場工作人員協助。
         </p>
@@ -63,15 +63,16 @@ function RecoverForm() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-5 px-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold">找回你的收集成果</h1>
-        <p className="text-sm text-gray-500">
+      <header className="flex flex-col gap-1.5">
+        <span className="px text-[11px] tracking-[0.22em] text-neon">RECOVER</span>
+        <h1 className="text-2xl font-black">找回你的收集成果</h1>
+        <p className="text-sm text-dim">
           輸入報到時填的信箱，我們會寄一個連結給你。
         </p>
       </header>
 
       {expired && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+        <p className="rounded-lg border border-moon/40 bg-moon/10 px-3 py-2.5 text-sm text-moon">
           剛才那個連結已經失效了。找回連結只能使用一次，且 30 分鐘後過期——
           請在下方重新要求一封新的信。
         </p>
@@ -86,11 +87,11 @@ function RecoverForm() {
           autoCapitalize="none"
           autoComplete="email"
           required
-          className="rounded-lg border border-gray-300 px-3 py-2.5"
+          className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
         />
 
         {error && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="rounded-lg bg-flare/15 px-3 py-2 text-sm text-flare">
             {error}
           </p>
         )}
@@ -98,7 +99,7 @@ function RecoverForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="tap-target rounded-lg bg-gray-900 py-3 font-medium text-white disabled:bg-gray-300"
+          className="tap-target glow-neon rounded-sm bg-neon py-3 font-bold text-void disabled:bg-line disabled:text-faint disabled:shadow-none"
         >
           {submitting ? "寄送中…" : "寄送找回連結"}
         </button>
@@ -106,7 +107,7 @@ function RecoverForm() {
 
       <Link
         href="/"
-        className="tap-target flex items-center justify-center text-sm text-gray-500"
+        className="tap-target flex items-center justify-center text-sm text-faint"
       >
         回到首頁
       </Link>

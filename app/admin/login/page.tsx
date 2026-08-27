@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
             autoCapitalize="none"
             autoComplete="username"
             required
-            className="rounded-lg border border-gray-300 px-3 py-2.5"
+            className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk"
           />
         </label>
 
@@ -58,12 +58,12 @@ export default function AdminLoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             required
-            className="rounded-lg border border-gray-300 px-3 py-2.5"
+            className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk"
           />
         </label>
 
         {error && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="rounded-lg bg-flare/15 px-3 py-2 text-sm text-flare">
             {error}
           </p>
         )}
@@ -71,7 +71,7 @@ export default function AdminLoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="tap-target rounded-lg bg-gray-900 py-3 font-medium text-white disabled:bg-gray-300"
+          className="tap-target rounded-lg bg-neon py-3 font-medium text-void disabled:bg-line"
         >
           {submitting ? "登入中…" : "登入"}
         </button>

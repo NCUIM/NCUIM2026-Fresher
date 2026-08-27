@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import {
@@ -7,6 +6,7 @@ import {
   type AchievementStatus,
 } from "@/lib/achievements";
 import { computeScore } from "@/lib/score";
+import { NavShell } from "@/components/BottomNav";
 
 export default async function AchievementsPage() {
   const me = await getCurrentParticipant();
@@ -21,17 +21,23 @@ export default async function AchievementsPage() {
   const earnedCount = achievements.filter((a) => a.earned).length;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
+    <NavShell>
       <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold">成就</h1>
-        <span className="text-sm text-gray-500">
-          {earnedCount}/{achievements.length}
+        <h1 className="text-xl font-black">成就</h1>
+        <span className="px text-sm text-dim">
+          {String(earnedCount).padStart(2, "0")}/
+          {String(achievements.length).padStart(2, "0")}
         </span>
       </header>
 
-      <div className="flex items-center justify-center gap-1 rounded-2xl bg-gray-900 py-4 text-white">
-        <span className="text-3xl font-bold">{score.total}</span>
-        <span className="self-end pb-1 text-sm text-gray-300">分</span>
+      <div className="glow-neon flex flex-col items-center gap-0.5 rounded-xl border border-neon/50 bg-slate py-4">
+        <span className="px text-[10px] tracking-[0.2em] text-faint">SCORE</span>
+        <span className="px text-glow-neon text-4xl leading-none text-neon">
+          {score.total}
+        </span>
+        <span className="px text-[10px] text-faint">
+          BASE {score.base} · BONUS {score.achievement}
+        </span>
       </div>
 
       <ul className="flex flex-col gap-2">
@@ -41,29 +47,23 @@ export default async function AchievementsPage() {
           </li>
         ))}
       </ul>
-
-      <Link
-        href="/me"
-        className="tap-target flex items-center justify-center text-sm text-gray-500"
-      >
-        回到我的頁面
-      </Link>
-    </main>
+    </NavShell>
   );
 }
 
 function AchievementRow({ achievement }: { achievement: AchievementStatus }) {
+  // 已解鎖：洋紅，與收集成功共用同一支顏色——都是「得手了」的時刻。
   if (achievement.earned) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-gray-900 bg-gray-900 px-4 py-3 text-white">
-        <span className="text-xl">🏅</span>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="font-medium">{achievement.title}</span>
-          {achievement.description && (
-            <span className="text-xs text-gray-300">{achievement.description}</span>
-          )}
+      <div className="flex flex-col gap-1 rounded-xl border border-flare/60 bg-flare/10 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="text-lg">🏅</span>
+          <span className="flex-1 font-bold text-flare">{achievement.title}</span>
+          <span className="px text-sm text-flare">+{achievement.points}</span>
         </div>
-        <span className="text-sm font-medium">+{achievement.points}</span>
+        {achievement.description && (
+          <span className="pl-8 text-xs text-dim">{achievement.description}</span>
+        )}
       </div>
     );
   }
@@ -71,9 +71,9 @@ function AchievementRow({ achievement }: { achievement: AchievementStatus }) {
   // 隱藏成就在伺服器端就已剪去名稱、條件與進度，這裡沒有東西可洩漏。
   if (achievement.hidden) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-300 px-4 py-3 text-gray-400">
-        <span className="text-xl">❓</span>
-        <span className="flex-1 font-medium">隱藏成就</span>
+      <div className="flex items-center gap-3 rounded-xl border border-dashed border-line px-4 py-3 text-faint">
+        <span className="text-lg">❓</span>
+        <span className="flex-1">隱藏成就</span>
       </div>
     );
   }
@@ -82,22 +82,25 @@ function AchievementRow({ achievement }: { achievement: AchievementStatus }) {
   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-gray-200 px-4 py-3">
+    <div className="flex flex-col gap-2 rounded-xl border border-line bg-night px-4 py-3">
       <div className="flex items-center gap-3">
-        <span className="text-xl grayscale">🏅</span>
+        <span className="text-lg opacity-40 grayscale">🏅</span>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="font-medium">{achievement.title}</span>
+          <span className="font-bold">{achievement.title}</span>
           {achievement.description && (
-            <span className="text-xs text-gray-500">{achievement.description}</span>
+            <span className="text-xs text-dim">{achievement.description}</span>
           )}
         </div>
-        <span className="text-sm text-gray-400">+{achievement.points}</span>
+        <span className="px text-sm text-faint">+{achievement.points}</span>
       </div>
       <div className="flex items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
-          <div className="h-full rounded-full bg-gray-900" style={{ width: `${pct}%` }} />
+        <div className="h-1 flex-1 overflow-hidden border border-line bg-void">
+          <div
+            className="glow-neon h-full bg-neon"
+            style={{ width: `${pct}%` }}
+          />
         </div>
-        <span className="text-xs tabular-nums text-gray-500">
+        <span className="px text-[11px] text-neon">
           {current}/{target}
         </span>
       </div>

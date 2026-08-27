@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { getReceivedImpressions } from "@/lib/wall";
+import { NavShell } from "@/components/BottomNav";
 import { FloatingWall } from "./FloatingWall";
 
 export default async function WallPage() {
@@ -20,23 +20,20 @@ export default async function WallPage() {
     : null;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-3 bg-gradient-to-b from-sky-50 to-white px-5 pt-8 pb-[calc(1.5rem+var(--safe-bottom))]">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold">大家眼中的你</h1>
-        <span className="text-sm text-gray-500">{impressions.length} 則</span>
+    <NavShell>
+      <header className="flex flex-col gap-1">
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-xl font-black">大家眼中的你</h1>
+          <span className="px text-glow-moon text-sm text-moon">
+            {String(impressions.length).padStart(2, "0")}
+          </span>
+        </div>
+        <p className="text-xs text-faint">
+          只有你看得到這面牆。點一則可以隱藏或回報。
+        </p>
       </header>
-      <p className="text-xs text-gray-500">
-        只有你看得到這面牆。點一則可以隱藏或回報。
-      </p>
 
       <FloatingWall impressions={impressions} purgeDate={purgeDate} />
-
-      <Link
-        href="/me"
-        className="tap-target flex items-center justify-center text-sm text-gray-500"
-      >
-        回到我的頁面
-      </Link>
-    </main>
+    </NavShell>
   );
 }

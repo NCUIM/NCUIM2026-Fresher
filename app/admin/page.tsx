@@ -37,15 +37,15 @@ export default async function AdminPage() {
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-bold">後台</h1>
-        <span className="text-sm text-gray-500">{admin.username}</span>
+        <span className="text-sm text-dim">{admin.username}</span>
       </header>
 
       <Link
         href="/admin/codes"
-        className="tap-target flex items-center justify-between rounded-xl border border-gray-300 px-4 py-3 font-medium"
+        className="tap-target flex items-center justify-between rounded-xl border border-line px-4 py-3 font-medium"
       >
         報到 QR Code
-        <span className="text-sm font-normal text-gray-500">投影／列印用 →</span>
+        <span className="text-sm font-normal text-dim">投影／列印用 →</span>
       </Link>
 
       <AdminDashboard

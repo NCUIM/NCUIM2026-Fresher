@@ -4,10 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { toCardView } from "@/lib/cards";
 import { CardDisplay } from "@/components/CardDisplay";
+import { NavShell } from "@/components/BottomNav";
 
-export default async function CollectionPage(
-  props: PageProps<"/collection">,
-) {
+export default async function CollectionPage(props: PageProps<"/collection">) {
   const me = await getCurrentParticipant();
   if (!me) redirect("/");
 
@@ -26,21 +25,27 @@ export default async function CollectionPage(
   });
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
+    <NavShell>
       <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold">收集清單</h1>
-        <span className="text-sm text-gray-500">{collections.length} 張</span>
+        <h1 className="text-xl font-black">收集清單</h1>
+        <span className="px text-glow-neon text-sm text-neon">
+          {String(collections.length).padStart(2, "0")}
+        </span>
       </header>
 
       {me.teamId && (
         <nav className="flex gap-2">
           <FilterTab href="/collection" active={!teamOnly} label="全部" />
-          <FilterTab href="/collection?filter=team" active={teamOnly} label="只看隊員" />
+          <FilterTab
+            href="/collection?filter=team"
+            active={teamOnly}
+            label="只看隊員"
+          />
         </nav>
       )}
 
       {collections.length === 0 ? (
-        <p className="py-12 text-center text-sm text-gray-500">
+        <p className="rounded-xl border border-dashed border-line px-4 py-12 text-center text-sm text-faint">
           {teamOnly
             ? "還沒有收集到同組的隊員。到現場問問看誰跟你同一組吧！"
             : "還沒有收集到任何人，去掃描別人的 QR Code 吧！"}
@@ -54,14 +59,7 @@ export default async function CollectionPage(
           ))}
         </ul>
       )}
-
-      <Link
-        href="/scan"
-        className="tap-target sticky bottom-[var(--safe-bottom)] flex items-center justify-center rounded-lg bg-gray-900 py-3 font-medium text-white"
-      >
-        掃描收集
-      </Link>
-    </main>
+    </NavShell>
   );
 }
 
@@ -77,8 +75,8 @@ function FilterTab({
   return (
     <Link
       href={href}
-      className={`tap-target flex items-center rounded-full px-4 text-sm ${
-        active ? "bg-gray-900 text-white" : "border border-gray-300"
+      className={`tap-target flex items-center rounded-sm border px-4 text-sm ${
+        active ? "border-neon text-neon" : "border-line text-dim"
       }`}
     >
       {label}

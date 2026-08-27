@@ -11,12 +11,15 @@ type Props = {
   roleLabel: string | null;
 };
 
+const field =
+  "rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint";
+
 export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
   const router = useRouter();
   const [passcode, setPasscode] = useState("");
   const [nickname, setNickname] = useState("");
-  const [socialUrl, setSocialUrl] = useState("");
   const [email, setEmail] = useState("");
+  const [socialUrl, setSocialUrl] = useState("");
   const [bio, setBio] = useState("");
   const [icons, setIcons] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +28,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
   function toggleIcon(key: string) {
     setIcons((current) => {
       if (current.includes(key)) return current.filter((k) => k !== key);
-      if (current.length >= REQUIRED_ICON_COUNT) return current; // 已滿，忽略
+      if (current.length >= REQUIRED_ICON_COUNT) return current;
       return [...current, key];
     });
   }
@@ -67,44 +70,47 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold">{eventName}</h1>
+      <header className="flex flex-col gap-1.5">
+        <span className="px text-glow-neon text-[11px] tracking-[0.22em] text-neon">
+          CHECK IN
+        </span>
+        <h1 className="text-2xl font-black">{eventName}</h1>
         {roleLabel && (
-          <span className="self-start rounded-full bg-gray-900 px-3 py-1 text-xs text-white">
+          <span className="px self-start rounded-sm border border-moon px-2 py-0.5 text-[10px] text-moon">
             {roleLabel}
           </span>
         )}
       </header>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium">活動通關碼</span>
-        <span className="text-xs text-gray-500">請輸入現場公布的通關碼</span>
+        <span className="text-sm font-bold">活動通關碼</span>
+        <span className="text-xs text-faint">請輸入現場公布的通關碼</span>
         <input
           value={passcode}
           onChange={(e) => setPasscode(e.target.value)}
           inputMode="numeric"
           autoComplete="off"
           required
-          className="rounded-lg border border-gray-300 px-3 py-2.5"
+          className={`px ${field}`}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium">暱稱</span>
+        <span className="text-sm font-bold">暱稱</span>
         <input
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           maxLength={NICKNAME_MAX}
           required
-          className="rounded-lg border border-gray-300 px-3 py-2.5"
+          className={field}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium">
-          電子信箱 <span className="text-gray-400">（選填，但強烈建議）</span>
+        <span className="text-sm font-bold">
+          電子信箱 <span className="text-faint">（選填，但強烈建議）</span>
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-faint">
           手機出狀況或瀏覽器資料被清除時，這是你唯一能自己找回收集成果的方法
         </span>
         <input
@@ -115,29 +121,31 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           autoCapitalize="none"
           autoComplete="email"
           placeholder="you@example.com"
-          className="rounded-lg border border-gray-300 px-3 py-2.5"
+          className={field}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium">
-          社群連結 <span className="text-gray-400">（選填）</span>
+        <span className="text-sm font-bold">
+          社群連結 <span className="text-faint">（選填）</span>
         </span>
-        <span className="text-xs text-gray-500">https 開頭，例如你的 Instagram</span>
+        <span className="text-xs text-faint">https 開頭，例如你的 Instagram</span>
         <input
           value={socialUrl}
           onChange={(e) => setSocialUrl(e.target.value)}
           inputMode="url"
           autoCapitalize="none"
           placeholder="https://instagram.com/..."
-          className="rounded-lg border border-gray-300 px-3 py-2.5"
+          className={field}
         />
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="flex items-center justify-between text-sm font-medium">
-          一句話自我介紹 <span className="text-gray-400">（選填）</span>
-          <span className="text-xs font-normal text-gray-400">
+        <span className="flex items-center justify-between text-sm font-bold">
+          <span>
+            一句話自我介紹 <span className="text-faint">（選填）</span>
+          </span>
+          <span className="px text-xs font-normal text-faint">
             {bio.length}/{BIO_MAX}
           </span>
         </span>
@@ -145,15 +153,15 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           value={bio}
           onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
           rows={2}
-          className="resize-none rounded-lg border border-gray-300 px-3 py-2.5"
+          className={`resize-none ${field}`}
         />
       </label>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="flex w-full items-center justify-between text-sm font-medium">
+        <legend className="flex w-full items-center justify-between text-sm font-bold">
           <span>選 {REQUIRED_ICON_COUNT} 個代表你的圖示</span>
           <span
-            className={`text-xs font-normal ${iconsComplete ? "text-green-600" : "text-gray-400"}`}
+            className={`px text-xs font-normal ${iconsComplete ? "text-neon" : "text-faint"}`}
           >
             {icons.length}/{REQUIRED_ICON_COUNT}
           </span>
@@ -168,12 +176,12 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
                 type="button"
                 onClick={() => toggleIcon(icon.key)}
                 aria-pressed={selected}
-                className={`tap-target flex flex-col items-center gap-0.5 rounded-lg border py-2 transition ${
+                className={`tap-target flex flex-col items-center gap-0.5 rounded-sm border py-2 transition-colors ${
                   selected
-                    ? "border-gray-900 bg-gray-900 text-white"
+                    ? "border-neon bg-neon/10 text-neon"
                     : disabled
-                      ? "border-gray-200 text-gray-300"
-                      : "border-gray-300"
+                      ? "border-line/50 text-faint"
+                      : "border-line text-dim"
                 }`}
               >
                 <span className="text-xl">{icon.emoji}</span>
@@ -185,7 +193,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
       </fieldset>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-lg bg-flare/15 px-3 py-2 text-sm text-flare">
           {error}
         </p>
       )}
@@ -193,7 +201,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
       <button
         type="submit"
         disabled={submitting || !iconsComplete}
-        className="tap-target rounded-lg bg-gray-900 py-3 font-medium text-white disabled:bg-gray-300"
+        className="tap-target glow-neon rounded-sm bg-neon py-3 font-bold text-void disabled:bg-line disabled:text-faint disabled:shadow-none"
       >
         {submitting ? "報到中…" : "完成報到"}
       </button>

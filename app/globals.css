@@ -1,32 +1,64 @@
 @import "tailwindcss";
 
-/* ---------------------------------------------------------------
-   手機瀏覽器的四個必要處理。見 ADR-0004 與 spec 的目標瀏覽器清單。
-   --------------------------------------------------------------- */
+/* ═══════════════════════════════════════════════════════════
+   午夜教室 × 霓虹
 
-:root {
-  /* 底部安全區，供固定於底部的操作列使用（iPhone 底部橫條） */
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-top: env(safe-area-inset-top, 0px);
+   刻意單一深色世界——這個方向本身就是「午夜」，做亮色版等於推翻概念。
+   所有顏色明確指定，不依賴系統主題。
+   ═══════════════════════════════════════════════════════════ */
+
+@theme {
+  /* 底層：不用純黑，帶靛的深夜藍才有「教室夜色」而非單純的暗色 UI */
+  --color-void: #060912;
+  --color-night: #0c1120;
+  --color-slate: #141b30;
+  --color-raised: #1c2540;
+  --color-line: #26314f;
+
+  /* 霓虹只有兩支，各有明確職責 */
+  --color-neon: #2be8d8; /* 日常操作、QR 框、進度 */
+  --color-flare: #ff2e63; /* 只給收集成功與成就解鎖 */
+  --color-moon: #ffce5c; /* 月光：九宮格入選者的短評 */
+  --color-board: #1b3a32; /* 黑板綠：只給公告 */
+
+  --color-chalk: #e9eef9; /* 粉筆白，不是純白 */
+  --color-dim: #7f8dab;
+  --color-faint: #4e5b78;
+
+  --font-px: var(--font-silkscreen), "Courier New", monospace;
 }
 
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  /* 底部導覽列高度，供頁面預留空間 */
+  --nav-h: 62px;
+
+  --glow-neon: 0 0 12px rgba(43, 232, 216, 0.45);
+  --glow-flare: 0 0 14px rgba(255, 46, 99, 0.45);
+  --glow-moon: 0 0 12px rgba(255, 206, 92, 0.3);
+}
+
+/* ───────────────────────────────────────────────
+   手機瀏覽器的四個必要處理
+   ─────────────────────────────────────────────── */
+
 html {
-  /* iOS 橫置時不自動放大字級 */
-  -webkit-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%; /* iOS 橫置時不自動放大字級 */
 }
 
 body {
-  /* 網址列會伸縮，100vh 會被裁切；dvh 才是實際可視高度 */
-  min-height: 100dvh;
-  /* 避免整頁橡皮筋回彈干擾掃描器與漂浮牆 */
+  min-height: 100dvh; /* 網址列會伸縮，100vh 會被裁切 */
   overscroll-behavior-y: none;
+  background: var(--color-void);
+  color: var(--color-chalk);
+  font-family: var(--font-noto-tc), system-ui, "Microsoft JhengHei", sans-serif;
 }
 
 /*
   iOS Safari 在輸入框 font-size < 16px 時會於聚焦時自動縮放整頁，
-  且縮放後不會自動還原，體驗很差。
-  這裡統一保底，不使用 maximum-scale=1 來壓制——那會連帶關閉雙指縮放，
-  對視力不佳的使用者是可及性問題。
+  且縮放後不會還原。不使用 maximum-scale=1 壓制——那會連帶關閉
+  雙指縮放，對視力不佳的使用者是可及性問題。
 */
 input,
 textarea,
@@ -34,20 +66,69 @@ select {
   font-size: max(16px, 1rem);
 }
 
-/* 觸控目標下限。九宮格格子、掃描按鈕等互動元件套用此類別。 */
+/* 觸控目標下限 */
 .tap-target {
   min-width: 44px;
   min-height: 44px;
 }
 
-/* ---------------------------------------------------------------
+/* ───────────────────────────────────────────────
+   質感：極淡掃描線。整站統一的 lofi 來源。
+   ─────────────────────────────────────────────── */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.022) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* ───────────────────────────────────────────────
+   點陣字：只給拉丁字與數字（代碼、分數、名次）。
+   中文交給 Noto Sans TC——Google Fonts 沒有涵蓋繁體的點陣字型，
+   混排是日系遊戲介面常見且可讀性更高的作法。
+   ─────────────────────────────────────────────── */
+
+.px {
+  font-family: var(--font-px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* ───────────────────────────────────────────────
+   發光
+   ─────────────────────────────────────────────── */
+
+.glow-neon { box-shadow: var(--glow-neon); }
+.glow-flare { box-shadow: var(--glow-flare); }
+.text-glow-neon { text-shadow: var(--glow-neon); }
+.text-glow-flare { text-shadow: var(--glow-flare); }
+.text-glow-moon { text-shadow: var(--glow-moon); }
+
+/*
+  色差。整個 App 只有掃描成功那一瞬間使用——
+  用多了就從效果變成雜訊。
+*/
+.aberration {
+  text-shadow:
+    -2px 0 rgba(255, 46, 99, 0.55),
+    2px 0 rgba(43, 232, 216, 0.55);
+}
+
+/* ───────────────────────────────────────────────
    漂浮牆
-   --------------------------------------------------------------- */
+   ─────────────────────────────────────────────── */
 
 .wall-field {
-  /* 卡片以絕對定位散布，容器需要自己的定位脈絡與最小高度 */
-  min-height: 60dvh;
+  min-height: 58dvh;
   overflow: hidden;
+  position: relative;
 }
 
 .wall-card {
@@ -59,12 +140,31 @@ select {
 }
 
 @keyframes wall-drift {
-  from {
-    transform: translate3d(0, 0, 0) rotate(-1.5deg);
-  }
-  to {
-    transform: translate3d(6%, -8%, 0) rotate(1.5deg);
-  }
+  from { transform: translate3d(0, 0, 0) rotate(-1.5deg); }
+  to { transform: translate3d(6%, -8%, 0) rotate(1.5deg); }
+}
+
+/* ───────────────────────────────────────────────
+   收集成功的揭示動態
+   ─────────────────────────────────────────────── */
+
+.reveal-scan {
+  animation: reveal-sweep 900ms ease-out 1;
+}
+
+@keyframes reveal-sweep {
+  from { transform: translateY(-140%); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: translateY(240%); opacity: 0; }
+}
+
+.reveal-card {
+  animation: reveal-pop 460ms cubic-bezier(0.2, 1.3, 0.4, 1) 1;
+}
+
+@keyframes reveal-pop {
+  from { transform: scale(0.86); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 /*
@@ -77,10 +177,15 @@ select {
     flex-direction: column;
     gap: 0.5rem;
     overflow: visible;
+    min-height: 0;
   }
   .wall-card {
     position: static !important;
     max-width: 100% !important;
+    animation: none;
+  }
+  .reveal-scan,
+  .reveal-card {
     animation: none;
   }
 }

@@ -1,6 +1,10 @@
 import "dotenv/config";
+import { assertTestDatabase } from "../lib/test-db-guard.ts";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+
+// 破壞性操作：拒絕對開發資料庫執行（見 lib/test-db-guard.ts）
+assertTestDatabase("測試");
 
 /**
  * 測試一律以 HTTP API 客戶端的身分驅動系統——這是 spec 議定的單一接縫。

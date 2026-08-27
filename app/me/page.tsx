@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { iconByKey } from "@/lib/icons";
+import { zodiacByKey } from "@/lib/zodiac";
 import { computeScore, pendingImpressions } from "@/lib/score";
 import { listAnnouncements } from "@/lib/announcements";
 import { getShowcase } from "@/lib/showcase";
@@ -71,6 +72,22 @@ export default async function MePage() {
             <span key={key}>{iconByKey(key)?.emoji}</span>
           ))}
         </div>
+
+        {(me.zodiac || me.university) && (
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-dim">
+            {me.zodiac && (
+              <span className="rounded-sm border border-line px-2 py-0.5">
+                {zodiacByKey(me.zodiac)?.emoji} {zodiacByKey(me.zodiac)?.label}
+              </span>
+            )}
+            {me.university && (
+              <span className="rounded-sm border border-line px-2 py-0.5">
+                {me.university}
+              </span>
+            )}
+          </div>
+        )}
+
         {me.bio && <p className="text-center text-sm text-dim">{me.bio}</p>}
 
         <Link href="/profile" className="text-xs text-faint underline">

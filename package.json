@@ -14,13 +14,15 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.mts",
-    "db:reset-participants": "node scripts/reset-participants.mts",
+    "db:reset-participants": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public node scripts/reset-participants.mts",
     "db:purge": "node scripts/purge-expired.mts",
     "tunnel": "docker compose --profile tunnel up ngrok",
     "tunnel:down": "docker compose --profile tunnel down",
-    "smoke": "node scripts/smoke.mts",
-    "test": "node --test --test-concurrency=1 tests/**/*.test.mts",
-    "rehearsal": "node scripts/rehearsal.mts"
+    "dev:test": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public next dev -p 3001",
+    "test:setup": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public node scripts/setup-test-db.mts",
+    "test": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public TEST_BASE_URL=http://localhost:3001 node --test --test-concurrency=1 tests/**/*.test.mts",
+    "smoke": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public SMOKE_BASE_URL=http://localhost:3001 node scripts/smoke.mts",
+    "rehearsal": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public REHEARSAL_BASE_URL=http://localhost:3001 node scripts/rehearsal.mts"
   },
   "repository": {
     "type": "git",
@@ -47,6 +49,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
+    "cross-env": "^10.1.0",
     "prisma": "^7.10.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2"

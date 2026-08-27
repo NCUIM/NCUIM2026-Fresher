@@ -22,8 +22,9 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { entryCode, passcode, nickname, socialUrl, bio, icons, email } =
-    parsed.data;
+  const {
+    entryCode, passcode, nickname, socialUrl, bio, icons, email, zodiac, university,
+  } = parsed.data;
 
   const entry = await prisma.entryCode.findUnique({
     where: { code: entryCode.toUpperCase() },
@@ -62,6 +63,8 @@ export async function POST(req: Request) {
         bio: bio ?? null,
         icons,
         email: email ?? null,
+        zodiac: zodiac ?? null,
+        university: university?.trim() || null,
       },
       include: { team: true },
     });

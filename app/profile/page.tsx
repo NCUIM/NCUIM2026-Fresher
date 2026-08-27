@@ -25,6 +25,8 @@ export default async function ProfilePage() {
           avatarUrl: me.avatarUrl,
           email: me.email,
           emailVerified: me.emailVerified,
+          zodiac: me.zodiac,
+          university: me.university,
         }}
       />
     </NavShell>

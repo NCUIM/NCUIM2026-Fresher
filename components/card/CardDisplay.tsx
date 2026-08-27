@@ -73,6 +73,22 @@ export function CardDisplay({
         </div>
       )}
 
+      {/* 破冰用的話題線索——沒填的人就不佔版面 */}
+      {(card.zodiac || card.university) && (
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-dim">
+          {card.zodiac && (
+            <span className="rounded-sm border border-line px-2 py-0.5">
+              {card.zodiac.emoji} {card.zodiac.label}
+            </span>
+          )}
+          {card.university && (
+            <span className="rounded-sm border border-line px-2 py-0.5">
+              {card.university}
+            </span>
+          )}
+        </div>
+      )}
+
       {card.bio && <p className="text-center text-sm text-dim">{card.bio}</p>}
 
       {card.socialUrl && (

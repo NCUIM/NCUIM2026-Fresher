@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { ICON_LIBRARY, REQUIRED_ICON_COUNT } from "@/lib/icons";
 import { resizeToAvatar } from "@/lib/resize-image";
 import { BIO_MAX, NICKNAME_MAX } from "@/lib/validation";
+import { UniversityField, ZodiacField } from "./ProfileFields";
 
 type Props = {
   initial: {
@@ -15,6 +16,8 @@ type Props = {
     avatarUrl: string | null;
     email: string | null;
     emailVerified: boolean;
+    zodiac: string | null;
+    university: string | null;
   };
 };
 
@@ -28,6 +31,8 @@ export function ProfileEditor({ initial }: Props) {
   const [icons, setIcons] = useState<string[]>(initial.icons);
   const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
   const [email, setEmail] = useState(initial.email ?? "");
+  const [zodiac, setZodiac] = useState(initial.zodiac ?? "");
+  const [university, setUniversity] = useState(initial.university ?? "");
   const [resending, setResending] = useState(false);
 
   const emailUnchanged = (email.trim() || null) === initial.email;
@@ -107,6 +112,8 @@ export function ProfileEditor({ initial }: Props) {
           bio: bio.trim() || null,
           socialUrl: socialUrl.trim() || null,
           email: email.trim() || null,
+          zodiac: zodiac || null,
+          university: university.trim() || null,
           icons,
         }),
       });
@@ -230,6 +237,11 @@ export function ProfileEditor({ initial }: Props) {
           className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
         />
       </label>
+
+      <div className="grid grid-cols-2 gap-3">
+        <ZodiacField value={zodiac} onChange={setZodiac} />
+        <UniversityField value={university} onChange={setUniversity} />
+      </div>
 
       <label className="flex flex-col gap-1.5">
         <span className="flex items-center justify-between text-sm font-medium">

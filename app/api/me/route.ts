@@ -31,6 +31,8 @@ export async function GET() {
     bio: me.bio,
     socialUrl: me.socialUrl,
     icons: me.icons,
+    zodiac: me.zodiac,
+    university: me.university,
     email: me.email,
     emailVerified: me.emailVerified,
     personalCode: me.personalCode,
@@ -67,7 +69,7 @@ export async function PUT(req: Request) {
       { status: 400 },
     );
   }
-  const { nickname, socialUrl, bio, icons, email } = parsed.data;
+  const { nickname, socialUrl, bio, icons, email, zodiac, university } = parsed.data;
 
   // 信箱換了就必須重新驗證：舊的驗證狀態只證明了舊位址收得到信。
   const emailChanged = (email ?? null) !== me.email;
@@ -80,6 +82,8 @@ export async function PUT(req: Request) {
       bio: bio ?? null,
       icons,
       email: email ?? null,
+      zodiac: zodiac ?? null,
+      university: university?.trim() || null,
       ...(emailChanged ? { emailVerified: false } : {}),
     },
     select: {

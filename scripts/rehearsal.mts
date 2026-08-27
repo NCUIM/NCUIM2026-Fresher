@@ -1,6 +1,10 @@
 import "dotenv/config";
+import { assertTestDatabase } from "../lib/test-db-guard.ts";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+
+// 破壞性操作：拒絕對開發資料庫執行（見 lib/test-db-guard.ts）
+assertTestDatabase("彩排");
 
 /**
  * 全流程彩排：模擬一場真實活動，從報到到封存。

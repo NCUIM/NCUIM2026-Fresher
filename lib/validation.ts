@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidIconKey, REQUIRED_ICON_COUNT } from "./icons";
+import { isValidZodiacKey, UNIVERSITY_MAX } from "./zodiac";
 
 export const NICKNAME_MAX = 20;
 export const BIO_MAX = 50;
@@ -50,6 +51,12 @@ export const profileSchema = z.object({
       message: "圖示不可重複",
     }),
   email: email.optional().nullable(),
+  zodiac: z
+    .string()
+    .refine(isValidZodiacKey, { message: "星座不存在" })
+    .optional()
+    .nullable(),
+  university: z.string().trim().max(UNIVERSITY_MAX).optional().nullable(),
 });
 
 export const recoveryRequestSchema = z.object({ email });

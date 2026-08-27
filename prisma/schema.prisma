@@ -96,6 +96,11 @@ model Participant {
   bio       String? // 一句話自我介紹
   icons     String[] // 三個個性化圖示的 key，純裝飾
 
+  // 破冰用的話題線索。兩者都是選填——報到動線已經夠長，
+  // 再加必填欄位會讓人在人潮中放棄。
+  zodiac     String? // 星座，從固定選項挑選
+  university String? // 大學，自由輸入
+
   // 找回身分。第一階段由工作人員於後台協助；第二階段改為 email 自助找回。
   // 見 docs/specs 的「簡化『身分找回』的後果」。
   email         String?

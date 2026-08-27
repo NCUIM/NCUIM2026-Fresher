@@ -17,5 +17,24 @@ services:
       timeout: 5s
       retries: 10
 
+  # HTTPS 隧道，供實機測試相機用。
+  #
+  # 放在 tunnel profile 底下，因此 `docker compose up -d` 只會啟動資料庫，
+  # 不會連帶把隧道開起來——隧道會把你的本機服務公開到網際網路上，
+  # 應該只在需要時才啟動。
+  #
+  # 目標寫 host.docker.internal 而非 localhost：容器裡的 localhost 是容器自己，
+  # 這個特殊名稱才會指向執行 Docker Desktop 的那台 Windows 主機。
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles: ["tunnel"]
+    command: http host.docker.internal:3000 --log stdout
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?請先在 .env 設定 NGROK_AUTHTOKEN（到 ngrok.com 註冊免費帳號取得）}
+    ports:
+      - "4040:4040" # ngrok 的本機檢視介面，也能在這裡看到公開網址
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   pgdata:

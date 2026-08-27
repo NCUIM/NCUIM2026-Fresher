@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/admin-session";
-import { AdminDashboard } from "./AdminDashboard";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 
 export default async function AdminPage() {
   const admin = await getCurrentAdmin();

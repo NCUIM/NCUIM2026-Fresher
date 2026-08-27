@@ -73,9 +73,45 @@ select {
 }
 
 /* ───────────────────────────────────────────────
-   質感：極淡掃描線。整站統一的 lofi 來源。
+   背景：大面積失焦光暈。
+
+   不用格線或電路板那種「科技符號」——那些會把注意力拉到背景本身。
+   這裡是月光透過教室窗戶的散射：低飽和、超大尺度、邊緣完全糊掉，
+   只負責讓畫面不是一片死黑，不參與任何資訊層級。
+
+   固定在視窗上而非跟著捲動，讓它像光源而不是圖案。
    ─────────────────────────────────────────────── */
 
+body::after {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    /* 主光源：偏藕紫的月光，右下偏大 */
+    radial-gradient(
+      42% 38% at 78% 72%,
+      rgba(150, 122, 190, 0.28) 0%,
+      rgba(110, 96, 160, 0.14) 42%,
+      transparent 72%
+    ),
+    /* 冷色補光：左上，帶青 */
+    radial-gradient(
+      38% 34% at 12% 14%,
+      rgba(43, 232, 216, 0.1) 0%,
+      transparent 68%
+    ),
+    /* 暖色餘光：極淡，避免整體過冷 */
+    radial-gradient(
+      30% 26% at 88% 8%,
+      rgba(255, 206, 92, 0.07) 0%,
+      transparent 70%
+    );
+  filter: blur(28px);
+}
+
+/* 掃描線：整站統一的 lofi 質感，極淡，不干擾閱讀 */
 body::before {
   content: "";
   position: fixed;
@@ -84,9 +120,19 @@ body::before {
   pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.022) 0 1px,
+    rgba(255, 255, 255, 0.018) 0 1px,
     transparent 1px 3px
   );
+}
+
+/*
+  半透明卡片：讓背景光暈透出來，畫面才有深度。
+  不透明的卡片會把光暈整片蓋掉，背景就白做了。
+*/
+.surface {
+  background: color-mix(in srgb, var(--color-slate) 72%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* ───────────────────────────────────────────────

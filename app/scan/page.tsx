@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCurrentParticipant } from "@/lib/session";
-import { NavShell } from "@/components/BottomNav";
-import { Scanner } from "./Scanner";
+import { NavShell } from "@/components/layout/BottomNav";
+import { Scanner } from "@/components/scan/Scanner";
 
 /**
  * 掃描頁在未報到與已報到兩種狀態下都可用——同一個相機，掃到什麼就做什麼。

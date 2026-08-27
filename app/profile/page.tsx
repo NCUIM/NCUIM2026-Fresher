@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
-import { NavShell } from "@/components/BottomNav";
-import { ProfileEditor } from "./ProfileEditor";
+import { NavShell } from "@/components/layout/BottomNav";
+import { ProfileEditor } from "@/components/forms/ProfileEditor";
 
 export default async function ProfilePage() {
   const me = await getCurrentParticipant();

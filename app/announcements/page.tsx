@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { listAnnouncements, markAllRead } from "@/lib/announcements";
-import { NavShell } from "@/components/BottomNav";
+import { NavShell } from "@/components/layout/BottomNav";
 
 export default async function AnnouncementsPage() {
   const me = await getCurrentParticipant();
@@ -30,7 +30,7 @@ export default async function AnnouncementsPage() {
               key={a.id}
               className={`rounded-lg border px-4 py-3 ${
                 a.read
-                  ? "border-line bg-night"
+                  ? "border-line surface"
                   : "border-moon/50 bg-board shadow-[inset_0_0_24px_rgba(255,206,92,0.06)]"
               }`}
             >

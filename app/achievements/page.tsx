@@ -6,7 +6,7 @@ import {
   type AchievementStatus,
 } from "@/lib/achievements";
 import { computeScore } from "@/lib/score";
-import { NavShell } from "@/components/BottomNav";
+import { NavShell } from "@/components/layout/BottomNav";
 
 export default async function AchievementsPage() {
   const me = await getCurrentParticipant();
@@ -30,7 +30,7 @@ export default async function AchievementsPage() {
         </span>
       </header>
 
-      <div className="glow-neon flex flex-col items-center gap-0.5 rounded-xl border border-neon/50 bg-slate py-4">
+      <div className="glow-neon flex flex-col items-center gap-0.5 rounded-xl border border-neon/50 surface py-4">
         <span className="px text-[10px] tracking-[0.2em] text-faint">SCORE</span>
         <span className="px text-glow-neon text-4xl leading-none text-neon">
           {score.total}
@@ -82,7 +82,7 @@ function AchievementRow({ achievement }: { achievement: AchievementStatus }) {
   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-line bg-night px-4 py-3">
+    <div className="flex flex-col gap-2 rounded-xl border border-line surface px-4 py-3">
       <div className="flex items-center gap-3">
         <span className="text-lg opacity-40 grayscale">🏅</span>
         <div className="flex min-w-0 flex-1 flex-col">

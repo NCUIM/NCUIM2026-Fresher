@@ -7,7 +7,7 @@ import { computeScore, pendingImpressions } from "@/lib/score";
 import { listAnnouncements } from "@/lib/announcements";
 import { getShowcase } from "@/lib/showcase";
 import { SHOWCASE_SIZE } from "@/lib/validation";
-import { NavShell } from "@/components/BottomNav";
+import { NavShell } from "@/components/layout/BottomNav";
 
 /**
  * 個人主頁：身分、分數、九宮格、收集到的卡片。
@@ -81,7 +81,7 @@ export default async function MePage() {
       {/* 分數 */}
       <Link
         href="/achievements"
-        className="glow-neon flex flex-col items-center gap-0.5 rounded-xl border border-neon/50 bg-slate py-4"
+        className="glow-neon flex flex-col items-center gap-0.5 rounded-xl border border-neon/50 surface py-4"
       >
         <span className="px text-[10px] tracking-[0.2em] text-faint">SCORE</span>
         <span className="px text-glow-neon text-4xl leading-none text-neon">

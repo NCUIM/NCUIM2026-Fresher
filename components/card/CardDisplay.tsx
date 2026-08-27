@@ -16,7 +16,7 @@ export function CardDisplay({
 
   return (
     <article
-      className={`flex flex-col items-center gap-3 rounded-xl border bg-slate p-5 ${
+      className={`flex flex-col items-center gap-3 rounded-xl border surface p-5 ${
         tone === "flare"
           ? "border-flare/60 shadow-[inset_0_0_28px_rgba(255,46,99,0.12)]"
           : "border-line"

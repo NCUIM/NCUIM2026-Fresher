@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { getLeaderboard } from "@/lib/leaderboard";
-import { NavShell } from "@/components/BottomNav";
-import { LeaderboardLive } from "./LeaderboardLive";
+import { NavShell } from "@/components/layout/BottomNav";
+import { LeaderboardLive } from "@/components/leaderboard/LeaderboardLive";
 
 export default async function LeaderboardPage() {
   const me = await getCurrentParticipant();

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getCurrentParticipant } from "@/lib/session";
 import { performScan, SCAN_FAILURE_MESSAGE } from "@/lib/scan";
-import { CollectReveal } from "@/components/CollectReveal";
-import { NavShell } from "@/components/BottomNav";
+import { CollectReveal } from "@/components/card/CollectReveal";
+import { NavShell } from "@/components/layout/BottomNav";
 
 /**
  * Personal Code QR 指向的網址，供**手機原生相機**完成收集（Q11 的備援路徑）。

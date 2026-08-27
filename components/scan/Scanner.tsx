@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import type { CardView } from "@/lib/cards";
 import { extractEntryCode, extractPersonalCode } from "@/lib/parse-code";
-import { CollectReveal } from "@/components/CollectReveal";
-import { QrCamera } from "@/components/QrCamera";
+import { CollectReveal } from "@/components/card/CollectReveal";
+import { QrCamera } from "@/components/scan/QrCamera";
 
 type Result =
   | { kind: "collected"; card: CardView; duplicate: boolean; points?: number }
@@ -171,7 +171,7 @@ export function Scanner({
         }
       />
 
-      <details className="rounded-xl border border-line bg-night px-4 py-3">
+      <details className="rounded-xl border border-line surface px-4 py-3">
         <summary className="cursor-pointer text-sm font-medium text-dim">
           掃不到？改用手動輸入
         </summary>

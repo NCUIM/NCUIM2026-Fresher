@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { getCurrentParticipant } from "@/lib/session";
-import { NavShell } from "@/components/BottomNav";
+import { NavShell } from "@/components/layout/BottomNav";
 
 /**
  * 出示自己的 QR Code。與 /scan 對稱——兩人相遇時一個出示、一個掃描。

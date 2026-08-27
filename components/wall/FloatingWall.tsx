@@ -115,7 +115,7 @@ export function FloatingWall({
           onClick={() => setSelected(null)}
         >
           <div
-            className="w-full max-w-md rounded-xl border border-line bg-night p-5"
+            className="w-full max-w-md rounded-xl border border-line surface p-5"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-base">{selected.text}</p>

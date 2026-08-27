@@ -65,7 +65,7 @@ export function WriteQueue({ initial }: { initial: Pending[] }) {
         </span>
       </div>
 
-      <div className="rounded-xl border border-line bg-night p-5">
+      <div className="rounded-xl border border-line surface p-5">
         <p className="px text-[10px] tracking-[0.2em] text-faint">ABOUT</p>
         <p className="mb-3 text-lg font-black">{current.nickname}</p>
 

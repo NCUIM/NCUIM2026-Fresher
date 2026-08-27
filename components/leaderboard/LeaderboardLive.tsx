@@ -93,7 +93,7 @@ function Row({
       className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
         highlight
           ? "border-neon bg-neon/10 text-neon"
-          : "border-line bg-night"
+          : "border-line surface"
       }`}
     >
       <span className={`px w-7 text-center text-sm ${highlight ? "" : rankColor}`}>

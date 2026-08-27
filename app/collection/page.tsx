@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { toCardView } from "@/lib/cards";
-import { CardDisplay } from "@/components/CardDisplay";
-import { NavShell } from "@/components/BottomNav";
+import { CardDisplay } from "@/components/card/CardDisplay";
+import { NavShell } from "@/components/layout/BottomNav";
 
 export default async function CollectionPage(props: PageProps<"/collection">) {
   const me = await getCurrentParticipant();

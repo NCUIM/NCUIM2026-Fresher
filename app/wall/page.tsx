@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { getReceivedImpressions } from "@/lib/wall";
-import { NavShell } from "@/components/BottomNav";
-import { FloatingWall } from "./FloatingWall";
+import { NavShell } from "@/components/layout/BottomNav";
+import { FloatingWall } from "@/components/wall/FloatingWall";
 
 export default async function WallPage() {
   const me = await getCurrentParticipant();

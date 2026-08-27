@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
-import { JoinForm } from "./JoinForm";
+import { JoinForm } from "@/components/forms/JoinForm";
 
 export default async function JoinPage(props: PageProps<"/join/[code]">) {
   const { code } = await props.params;

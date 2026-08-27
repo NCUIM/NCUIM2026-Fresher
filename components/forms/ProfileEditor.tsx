@@ -52,6 +52,9 @@ export function ProfileEditor({ initial }: Props) {
 
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // 導向需要一點時間，這段期間按鈕要維持在「已儲存」狀態，
+  // 否則使用者會以為沒反應而重複按。
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -120,13 +123,21 @@ export function ProfileEditor({ initial }: Props) {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "儲存失敗");
+        setSaving(false);
         return;
       }
-      setNotice("已儲存。收集過你的人會立刻看到更新後的卡片。");
+
+      /*
+        存檔後回到個人頁。
+        push 之後緊接 refresh：/me 是伺服器元件，若沿用客戶端快取裡的
+        版本，使用者會回到一個仍顯示舊資料的畫面，看起來像沒存成功。
+        refresh 讓它重新向伺服器要一次。
+      */
+      setSaved(true);
+      router.push("/me");
       router.refresh();
     } catch {
       setError("連線失敗，請確認網路");
-    } finally {
       setSaving(false);
     }
   }
@@ -306,10 +317,10 @@ export function ProfileEditor({ initial }: Props) {
 
       <button
         onClick={save}
-        disabled={saving || !iconsComplete || !nickname.trim()}
-        className="tap-target sticky bottom-[var(--safe-bottom)] rounded-lg bg-neon py-3 font-medium text-void disabled:bg-line"
+        disabled={saved || saving || !iconsComplete || !nickname.trim()}
+        className="tap-target glow-neon sticky bottom-[var(--safe-bottom)] rounded-sm bg-neon py-3 font-bold text-void disabled:bg-line disabled:text-faint disabled:shadow-none"
       >
-        {saving ? "儲存中…" : "儲存"}
+        {saved ? "已儲存，返回中…" : saving ? "儲存中…" : "儲存"}
       </button>
     </div>
   );

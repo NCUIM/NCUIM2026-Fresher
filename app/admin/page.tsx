@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { EventSettings } from "@/components/admin/EventSettings";
 
 export default async function AdminPage() {
   const admin = await getCurrentAdmin();
@@ -10,7 +11,13 @@ export default async function AdminPage() {
 
   const event = await prisma.event.findFirst({
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    select: { name: true, status: true },
+    select: {
+      name: true,
+      status: true,
+      passcode: true,
+      basePoints: true,
+      leaderboardTopN: true,
+    },
   });
 
   const participants = await prisma.participant.findMany({
@@ -47,6 +54,17 @@ export default async function AdminPage() {
         報到 QR Code
         <span className="text-sm font-normal text-dim">投影／列印用 →</span>
       </Link>
+
+      {event && (
+        <EventSettings
+          initial={{
+            passcode: event.passcode,
+            basePoints: event.basePoints,
+            leaderboardTopN: event.leaderboardTopN,
+          }}
+          participantCount={participants.length}
+        />
+      )}
 
       <AdminDashboard
         initial={participants}

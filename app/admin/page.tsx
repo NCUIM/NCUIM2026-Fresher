@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/admin-session";
@@ -38,6 +39,14 @@ export default async function AdminPage() {
         <h1 className="text-xl font-bold">後台</h1>
         <span className="text-sm text-gray-500">{admin.username}</span>
       </header>
+
+      <Link
+        href="/admin/codes"
+        className="tap-target flex items-center justify-between rounded-xl border border-gray-300 px-4 py-3 font-medium"
+      >
+        報到 QR Code
+        <span className="text-sm font-normal text-gray-500">投影／列印用 →</span>
+      </Link>
 
       <AdminDashboard
         initial={participants}

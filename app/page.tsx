@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
@@ -14,30 +15,43 @@ export default async function Home() {
     select: { name: true },
   });
 
-  return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
-      <h1 className="text-2xl font-bold">
-        {event?.name ?? "卡片收集"}
-      </h1>
+  if (!event) {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-2 px-6 text-center">
+        <h1 className="text-xl font-bold">目前沒有進行中的活動</h1>
+        <p className="text-sm text-gray-500">請等主辦方開放報到後再回來。</p>
+      </main>
+    );
+  }
 
-      {event ? (
-        <>
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-6 pt-12 pb-[calc(1.5rem+var(--safe-bottom))]">
+      {/*
+        首頁只講一件事：去報到。
+        找回身分是少數人才需要的路徑，放在底部不與主動線競爭注意力。
+      */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold">{event.name}</h1>
           <p className="text-sm text-gray-600">
-            請掃描主辦方提供的<strong>報到 QR Code</strong> 開始。
+            掃描主辦方提供的報到 QR Code，開始收集大家的卡片。
           </p>
-          <p className="text-xs text-gray-400">
-            已經報到過卻看到這個畫面？可能是瀏覽器資料被清除了。
-          </p>
-          <a
-            href="/recover"
-            className="tap-target flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium"
-          >
-            用信箱找回我的收集成果
-          </a>
-        </>
-      ) : (
-        <p className="text-sm text-gray-500">目前沒有進行中的活動。</p>
-      )}
+        </div>
+
+        <Link
+          href="/join"
+          className="tap-target flex w-full items-center justify-center rounded-lg bg-gray-900 py-3.5 font-medium text-white"
+        >
+          掃描報到碼
+        </Link>
+      </div>
+
+      <div className="flex flex-col items-center gap-1 border-t border-gray-200 pt-5">
+        <p className="text-xs text-gray-400">已經報到過，但這裡看不到你的資料？</p>
+        <Link href="/recover" className="tap-target flex items-center text-sm text-gray-600 underline">
+          用信箱找回收集成果
+        </Link>
+      </div>
     </main>
   );
 }

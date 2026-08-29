@@ -20,6 +20,8 @@ export async function GET() {
     select: {
       id: true,
       nickname: true,
+      // 這是全站唯一會回傳真實姓名的端點，而它擋在管理員驗證之後。
+      realName: true,
       role: true,
       avatarUrl: true,
       bio: true,

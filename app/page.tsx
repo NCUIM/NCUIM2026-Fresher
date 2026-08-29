@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -32,6 +33,21 @@ export default async function Home() {
         找回身分是少數人才需要的路徑，放在底部不與主動線競爭注意力。
       */}
       <div className="flex flex-1 flex-col items-center justify-center gap-7 text-center">
+        {/*
+          原圖是 1254px 見方、1MB。用 next/image 讓它產生對應尺寸的版本，
+          手機在現場只會下載 144px 那一張——這裡的網路要分給全場的人。
+
+          alt 留空：緊接著就是活動名稱，讀螢幕軟體再唸一次吉祥物只是雜訊。
+        */}
+        <Image
+          src="/icon.png"
+          alt=""
+          width={144}
+          height={144}
+          priority
+          className="size-36 drop-shadow-[0_0_32px_rgba(90,120,255,0.35)]"
+        />
+
         <div className="flex flex-col gap-3">
           <span className="px text-glow-neon text-[11px] tracking-[0.24em] text-neon">
             CHECK IN

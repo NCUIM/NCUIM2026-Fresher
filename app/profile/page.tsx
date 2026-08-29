@@ -19,6 +19,7 @@ export default async function ProfilePage() {
       <ProfileEditor
         initial={{
           nickname: me.nickname,
+          realName: me.realName,
           bio: me.bio,
           socialUrl: me.socialUrl,
           icons: me.icons,

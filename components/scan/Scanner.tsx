@@ -27,9 +27,17 @@ export function Scanner({
   const router = useRouter();
   const [result, setResult] = useState<Result | null>(null);
   const [manual, setManual] = useState("");
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
+  /**
+   * 成功時設好 result 並回傳 null，失敗時回傳錯誤訊息交給呼叫端。
+   *
+   * 錯誤該顯示在哪裡取決於使用者剛才做了什麼：用相機掃的人視線在畫面中央，
+   * 用手動輸入的人視線在輸入框上。由這裡直接決定的話，只能二選一。
+   */
   const collect = useCallback(
-    async (personalCode: string) => {
+    async (personalCode: string): Promise<string | null> => {
       try {
         const res = await fetch("/api/scan", {
           method: "POST",
@@ -37,14 +45,8 @@ export function Scanner({
           body: JSON.stringify({ personalCode }),
         });
         const data = await res.json();
-        if (!res.ok) {
-          setResult({
-            kind: "message",
-            title: "無法收集",
-            body: data.error ?? "收集失敗",
-          });
-          return;
-        }
+        if (!res.ok) return data.error ?? "收集失敗";
+
         setResult({
           kind: "collected",
           card: data.card,
@@ -52,12 +54,9 @@ export function Scanner({
           points: data.duplicate ? undefined : basePoints,
         });
         if (navigator.vibrate) navigator.vibrate(data.duplicate ? 40 : [40, 60, 40]);
+        return null;
       } catch {
-        setResult({
-          kind: "message",
-          title: "無法收集",
-          body: "連線失敗，請確認網路",
-        });
+        return "連線失敗，請確認網路";
       }
     },
     [basePoints],
@@ -83,7 +82,9 @@ export function Scanner({
           });
           return true;
         }
-        await collect(personalCode);
+        // 相機路徑：使用者正盯著畫面，錯誤就顯示在畫面上。
+        const error = await collect(personalCode);
+        if (error) setResult({ kind: "message", title: "無法收集", body: error });
         return true;
       }
 
@@ -92,30 +93,75 @@ export function Scanner({
     [authenticated, collect, router],
   );
 
-  function submitManual() {
-    const entryCode = extractEntryCode(manual);
-    if (entryCode && !authenticated) {
-      router.push(`/join/${entryCode}`);
+  /*
+    打錯代碼、輸入了另一種碼、長度不對——三種失敗都給同一句話。
+    對站在報到隊伍裡的人來說，分辨這三者沒有意義，他要做的事都一樣：
+    重打一次。唯一需要分開講的是已經報到過的人，因為那句話要告訴他
+    問題不在代碼上，不必再重打。
+  */
+  const CODE_NOT_FOUND = authenticated ? "查不到這組代碼" : "查不到這組報到碼";
+
+  /**
+   * 手動輸入路徑。所有失敗都留在輸入框旁邊，不換頁也不清掉輸入內容——
+   * 手輸最常見的錯誤是打錯一兩個字元，重試應該只差幾個按鍵。
+   */
+  async function submitManual() {
+    setManualError(null);
+
+    const raw = manual.trim();
+    if (!raw) {
+      setManualError("請先輸入代碼");
       return;
     }
-    const personalCode = extractPersonalCode(manual);
+
+    const entryCode = extractEntryCode(raw);
+    const personalCode = extractPersonalCode(raw);
+
     if (personalCode && authenticated) {
-      void collect(personalCode);
+      setBusy(true);
+      const error = await collect(personalCode);
+      setBusy(false);
+      if (error) setManualError(error);
       return;
     }
-    if (personalCode && !authenticated) {
-      setResult({
-        kind: "message",
-        title: "請先完成報到",
-        body: "這是個人卡片的代碼。請先向主辦方取得報到碼。",
-      });
+
+    if (entryCode && authenticated) {
+      setManualError("已經報到過了");
       return;
     }
-    if (entryCode) {
-      router.push(`/join/${entryCode}`);
+
+    if (entryCode && !authenticated) {
+      /*
+        先問過伺服器再導向。直接 push 過去的話，代碼打錯的人會落在
+        /join/[code] 的錯誤頁上——那頁沒有返回入口，也沒有輸入框。
+      */
+      setBusy(true);
+      try {
+        const res = await fetch(`/api/entry/${entryCode}`);
+        if (res.ok) {
+          router.push(`/join/${entryCode}`);
+          return;
+        }
+        /*
+          活動已封存是另一回事，必須照實說。回「查不到」會讓人反覆
+          檢查一個根本沒打錯的代碼。
+        */
+        if (res.status === 409) {
+          const data = await res.json().catch(() => null);
+          setManualError(data?.error ?? CODE_NOT_FOUND);
+          return;
+        }
+        setManualError(CODE_NOT_FOUND);
+      } catch {
+        setManualError("連線失敗，請確認網路");
+      } finally {
+        setBusy(false);
+      }
       return;
     }
-    setResult({ kind: "message", title: "代碼格式不正確", body: "請再確認一次。" });
+
+    // 未報到卻輸入個人碼，或長度不符任何一種——都走同一句。
+    setManualError(CODE_NOT_FOUND);
   }
 
   if (result) {
@@ -138,7 +184,7 @@ export function Scanner({
 
         <button
           onClick={() => setResult(null)}
-          className="tap-target glow-neon rounded-sm bg-neon py-3 font-bold text-void"
+          className="tap-target glow-neon rounded-sm bg-neon py-3 font-bold text-void transition-colors hover:bg-neon/85 active:bg-neon/70"
         >
           繼續掃描
         </button>
@@ -178,19 +224,38 @@ export function Scanner({
         <div className="mt-3 flex gap-2">
           <input
             value={manual}
-            onChange={(e) => setManual(e.target.value)}
+            onChange={(e) => {
+              setManual(e.target.value);
+              // 一開始修改就收掉舊訊息，否則錯誤會停在已經改過的內容旁邊。
+              setManualError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submitManual();
+            }}
             placeholder={authenticated ? "對方卡片下方的代碼" : "例如 JOINNCU1"}
             autoCapitalize="characters"
             autoComplete="off"
-            className="px min-w-0 flex-1 rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
+            aria-invalid={manualError !== null}
+            className="px min-w-0 flex-1 rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint focus:border-neon focus:outline-none"
           />
           <button
-            onClick={submitManual}
-            className="tap-target rounded-sm border border-neon px-4 font-bold text-neon"
+            onClick={() => void submitManual()}
+            disabled={busy}
+            className="tap-target rounded-sm border border-neon px-4 font-bold text-neon transition-colors hover:bg-neon hover:text-void active:bg-neon active:text-void disabled:border-line disabled:bg-transparent disabled:text-faint"
           >
             前往
           </button>
         </div>
+
+        {manualError && (
+          <p
+            role="alert"
+            aria-live="assertive"
+            className="mt-2 rounded-sm border border-flare/50 bg-flare/15 px-3 py-2 text-sm text-flare"
+          >
+            {manualError}
+          </p>
+        )}
       </details>
     </div>
   );

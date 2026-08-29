@@ -73,6 +73,7 @@ describe("活動設定", () => {
       entryCode: "JOINNCU1",
       passcode: "1234",
       nickname: "用舊碼的人",
+      realName: "用舊碼的人",
       icons: ["music", "game", "food"],
       bio: "測試用",
     });
@@ -88,6 +89,7 @@ describe("活動設定", () => {
       entryCode: "JOINNCU1",
       passcode: "NEWPASS",
       nickname: "用新碼的人",
+      realName: "用新碼的人",
       icons: ["music", "game", "food"],
       bio: "測試用",
     });

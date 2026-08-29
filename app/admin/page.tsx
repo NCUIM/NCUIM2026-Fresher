@@ -27,6 +27,7 @@ export default async function AdminPage() {
       select: {
         id: true,
         nickname: true,
+        realName: true,
         role: true,
         avatarUrl: true,
         bio: true,

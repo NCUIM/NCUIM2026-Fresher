@@ -183,6 +183,7 @@ describe("找回身分", () => {
       headers: { "Content-Type": "application/json", cookie: ming.cookie },
       body: JSON.stringify({
         nickname: "陳小明",
+        realName: "陳小明",
         icons: ["music", "game", "food"],
         bio: "很高興認識大家",
         email: "newaddress@example.com",

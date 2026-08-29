@@ -64,6 +64,7 @@ describe("封存", () => {
       entryCode: "JOINNCU1",
       passcode: "1234",
       nickname: "遲到的人",
+      realName: "遲到的人",
       icons: ["music", "game", "food"],
       bio: "我來晚了",
     });

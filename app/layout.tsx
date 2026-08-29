@@ -21,6 +21,15 @@ const silkscreen = Silkscreen({
 export const metadata: Metadata = {
   title: "卡片收集",
   description: "活動卡片收集系統",
+  /*
+    分頁圖示與 iOS「加入主畫面」的圖示。後者值得特別設：
+    活動當天有人會把頁面加到主畫面，沒有這個就只會拿到一張網頁截圖。
+
+    指向 256px 的版本而不是 icon.png——原圖是 1254px、1MB。
+    <link rel="icon"> 不會經過 next/image，指向原圖等於讓每個人
+    為了一個分頁角落的圖示下載 1MB。
+  */
+  icons: { icon: "/icon-256.png", apple: "/icon-256.png" },
 };
 
 export const viewport: Viewport = {

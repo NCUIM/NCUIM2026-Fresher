@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ICON_LIBRARY, REQUIRED_ICON_COUNT } from "@/lib/icons";
-import { BIO_MAX, NICKNAME_MAX } from "@/lib/validation";
+import { BIO_MAX, NICKNAME_MAX, REAL_NAME_MAX } from "@/lib/validation";
 import { UniversityField, ZodiacField } from "./ProfileFields";
 
 type Props = {
@@ -18,8 +18,11 @@ const field =
  * 報到表單，分兩步。
  *
  * 先前八個欄位一次攤開，在報到人潮中很容易讓人放棄。
- * 第一步只放「沒有就無法進場」的四項，第二步才是能讓別人認識你的資料，
+ * 第一步只放「沒有就無法進場」的五項，第二步才是能讓別人認識你的資料，
  * 而且可以跳過——之後在個人資料頁隨時能補。
+ *
+ * 所有必填欄位都必須在第一步：第二步可以跳過，放在那裡的「必填」
+ * 會在按下「先跳過」時直接變成一個 400。
  *
  * 信箱放在第二步的最上面並說明理由：它不是必要條件，
  * 但沒填的人日後換裝置就再也找不回自己的收集成果。
@@ -28,6 +31,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
 
   const [passcode, setPasscode] = useState("");
+  const [realName, setRealName] = useState("");
   const [nickname, setNickname] = useState("");
   const [icons, setIcons] = useState<string[]>([]);
 
@@ -52,6 +56,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
   const iconsComplete = icons.length === REQUIRED_ICON_COUNT;
   const step1Ready =
     passcode.trim() !== "" &&
+    realName.trim() !== "" &&
     nickname.trim() !== "" &&
     bio.trim() !== "" &&
     iconsComplete;
@@ -68,6 +73,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           entryCode,
           passcode,
           nickname,
+          realName: realName.trim(),
           socialUrl: socialUrl.trim() || null,
           bio: bio.trim(),
           email: email.trim() || null,
@@ -155,8 +161,29 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           </label>
 
           <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold">姓名</span>
+            {/*
+              取暱稱的人往往正是不想讓全場看到本名的人。
+              先講清楚只有工作人員看得到，才不會有人在這裡填假名——
+              填了假名，現場核對身分與發獎品時就對不上人。
+            */}
+            <span className="text-xs text-faint">
+              只有工作人員看得到，用於現場核對與發放獎品
+            </span>
+            <input
+              value={realName}
+              onChange={(e) => setRealName(e.target.value)}
+              maxLength={REAL_NAME_MAX}
+              autoComplete="name"
+              className={field}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
             <span className="text-sm font-bold">暱稱</span>
-            <span className="text-xs text-faint">別人收集到你時看到的名字</span>
+            <span className="text-xs text-faint">
+              別人收集到你時看到的名字，卡片上只會出現這個
+            </span>
             <input
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}

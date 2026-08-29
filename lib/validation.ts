@@ -3,6 +3,7 @@ import { isValidIconKey, REQUIRED_ICON_COUNT } from "./icons";
 import { isValidZodiacKey, UNIVERSITY_MAX } from "./zodiac";
 
 export const NICKNAME_MAX = 20;
+export const REAL_NAME_MAX = 20;
 export const BIO_MAX = 50;
 export const IMPRESSION_MAX = 50;
 
@@ -41,6 +42,14 @@ const email = z
 
 export const profileSchema = z.object({
   nickname: z.string().trim().min(1, "請輸入暱稱").max(NICKNAME_MAX),
+  /*
+    姓名為必填，但只給工作人員看。現場核對、簽到表與獎品發放都需要真名，
+    而暱稱在那些場合對應不到人。
+
+    它刻意不進入 CardView（見 lib/cards.ts）——那份手寫白名單就是
+    對外呈現的唯一出口，姓名不加進去就不會外流到卡片、牆或排行榜上。
+  */
+  realName: z.string().trim().min(1, "請輸入姓名").max(REAL_NAME_MAX),
   socialUrl: httpsUrl.optional().nullable(),
   /*
     自我介紹為必填。它是卡片上最能製造話題的一欄——沒有它，

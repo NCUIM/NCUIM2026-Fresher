@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { ENTRY_CODE_LENGTH, PERSONAL_CODE_LENGTH } from "./parse-code";
 
 // 去除易混淆字元（0/O、1/I/L），因為 Entry Code 可能需要口頭唸出或手動輸入。
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -12,9 +13,14 @@ function randomFrom(alphabet: string, length: number): string {
   return out;
 }
 
-/** Event 層級的註冊碼。短且可唸，供印製或投影。 */
+/**
+ * Event 層級的註冊碼。短且可唸，供印製或投影。
+ *
+ * 長度是有意義的：手動輸入時，程式只能靠長度分辨這是註冊碼還是個人碼。
+ * 自訂註冊碼若不是 ENTRY_CODE_LENGTH 個字元，手動輸入那條路會認不得它。
+ */
 export function generateEntryCode(): string {
-  return randomFrom(ALPHABET, 8);
+  return randomFrom(ALPHABET, ENTRY_CODE_LENGTH);
 }
 
 /**
@@ -22,7 +28,7 @@ export function generateEntryCode(): string {
  * 公開性質，但仍需夠長以避免被窮舉猜測後偽造收集。
  */
 export function generatePersonalCode(): string {
-  return randomFrom(ALPHABET, 12);
+  return randomFrom(ALPHABET, PERSONAL_CODE_LENGTH);
 }
 
 /**

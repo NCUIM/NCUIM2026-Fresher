@@ -83,6 +83,7 @@ describe("Impression 撰寫", () => {
       entryCode: "JOINNCU1",
       passcode: "1234",
       nickname: "沒寫自介的人",
+      realName: "沒寫自介的人",
       icons: ["music", "game", "food"],
       bio: "   ",
     });

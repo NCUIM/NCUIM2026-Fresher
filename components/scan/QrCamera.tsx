@@ -162,7 +162,7 @@ export function QrCamera({ onDecode, fallbackHint }: Props) {
                 <span className="text-4xl">◎</span>
                 <button
                   onClick={start}
-                  className="tap-target glow-neon rounded-sm bg-neon px-6 py-3 font-bold text-void"
+                  className="tap-target glow-neon rounded-sm bg-neon px-6 py-3 font-bold text-void transition-colors hover:bg-neon/85 active:bg-neon/70"
                 >
                   開啟相機
                 </button>

@@ -96,6 +96,14 @@ model Participant {
   bio       String? // 一句話自我介紹
   icons     String[] // 三個個性化圖示的 key，純裝飾
 
+  /// 真實姓名。**僅工作人員在後台可見，絕不出現在 Card 上。**
+  /// 對外一律顯示 nickname——取暱稱的人往往正是不想讓全場看到本名的人。
+  /// 現場核對身分、簽到表與獎品發放需要真名，暱稱在那些場合對應不到人。
+  ///
+  /// 應用層必填、資料庫保持可空：既有的 20 筆都沒有這個欄位，
+  /// 設成 NOT NULL 得先回填才不會讓它們變成不合法的資料。
+  realName String?
+
   // 破冰用的話題線索。兩者都是選填——報到動線已經夠長，
   // 再加必填欄位會讓人在人潮中放棄。
   zodiac     String? // 星座，從固定選項挑選
@@ -123,6 +131,14 @@ model Participant {
   achievements        AchievementEarned[]
   announcementReads   AnnouncementRead[]
 
+  /// 一個信箱在同一場活動只能報到一次。
+  ///
+  /// 範圍限定在 Event 而非全域：身分本來就不跨活動延續（ADR-0001），
+  /// 同一個人明年再參加時應該還能用同一個信箱報到。
+  ///
+  /// Postgres 視每個 NULL 為相異值，所以沒填信箱的人不受這條限制——
+  /// 這正是我們要的：信箱是選填，不該因為留白而擋下第二個人報到。
+  @@unique([eventId, email])
   @@index([eventId])
   @@index([teamId])
 }

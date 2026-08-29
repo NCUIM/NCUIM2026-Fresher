@@ -41,7 +41,9 @@ const BASE_JOIN = {
 };
 
 async function join(nickname: string, overrides: Record<string, unknown> = {}) {
-  const r = await api("/api/join", { ...BASE_JOIN, nickname, ...overrides });
+  const r = await api("/api/join", {
+    ...BASE_JOIN, nickname, realName: nickname, ...overrides,
+  });
   const raw = r.res.headers.get("set-cookie") ?? "";
   return {
     status: r.status,
@@ -82,7 +84,9 @@ const hua = (await join("林小華")).session;
 const mei = (await join("王大美")).session;
 {
   check("暱稱以 UTF-8 正確保存", ming.nickname === "陳小明", ming.nickname);
-  const staff = await api("/api/join", { ...BASE_JOIN, entryCode: "STAFFNCU", nickname: "幹部小李" });
+  const staff = await api("/api/join", {
+    ...BASE_JOIN, entryCode: "STAFFNCU", nickname: "幹部小李", realName: "李大明",
+  });
   check("工作人員註冊碼賦予 STAFF 身分", staff.body.role === "STAFF");
   check("工作人員不被分配組別", staff.body.team === null);
 }

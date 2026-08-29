@@ -44,6 +44,7 @@ async function join(nickname: string, extra: Record<string, unknown> = {}): Prom
     entryCode: "JOINNCU1",
     passcode: "1234",
     nickname,
+    realName: nickname,
     icons: ["music", "game", "food"],
     bio: "請多指教！",
     ...extra,
@@ -80,6 +81,7 @@ for (let i = 1; i <= 2; i++) {
     entryCode: "STAFFNCU",
     passcode: "1234",
     nickname: `幹部${i}`,
+    realName: `幹部${i}`,
     icons: ["star", "code", "gym"],
     bio: "有問題都可以問我",
   });
@@ -271,6 +273,7 @@ const joinAfter = await api("/api/join", {
   entryCode: "JOINNCU1",
   passcode: "1234",
   nickname: "太晚了",
+  realName: "太晚了",
   icons: ["music", "game", "food"],
   bio: "我來太晚了",
 });

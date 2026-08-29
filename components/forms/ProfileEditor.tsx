@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { ICON_LIBRARY, REQUIRED_ICON_COUNT } from "@/lib/icons";
 import { resizeToAvatar } from "@/lib/resize-image";
-import { BIO_MAX, NICKNAME_MAX } from "@/lib/validation";
+import { BIO_MAX, NICKNAME_MAX, REAL_NAME_MAX } from "@/lib/validation";
 import { UniversityField, ZodiacField } from "./ProfileFields";
 
 type Props = {
   initial: {
     nickname: string;
+    realName: string | null;
     bio: string | null;
     socialUrl: string | null;
     icons: string[];
@@ -26,6 +27,7 @@ export function ProfileEditor({ initial }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [nickname, setNickname] = useState(initial.nickname);
+  const [realName, setRealName] = useState(initial.realName ?? "");
   const [bio, setBio] = useState(initial.bio ?? "");
   const [socialUrl, setSocialUrl] = useState(initial.socialUrl ?? "");
   const [icons, setIcons] = useState<string[]>(initial.icons);
@@ -112,6 +114,7 @@ export function ProfileEditor({ initial }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nickname,
+          realName: realName.trim(),
           bio: bio.trim(),
           socialUrl: socialUrl.trim() || null,
           email: email.trim() || null,
@@ -193,7 +196,27 @@ export function ProfileEditor({ initial }: Props) {
       </section>
 
       <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium">姓名</span>
+        <span className="text-xs text-dim">
+          只有工作人員看得到，不會出現在你的卡片上
+        </span>
+        <input
+          value={realName}
+          onChange={(e) => setRealName(e.target.value)}
+          maxLength={REAL_NAME_MAX}
+          autoComplete="name"
+          className="rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
+        />
+        {!realName.trim() && (
+          <span className="text-xs text-moon">
+            這是必填欄位。既有的參與者若還沒填，儲存前需要補上。
+          </span>
+        )}
+      </label>
+
+      <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium">暱稱</span>
+        <span className="text-xs text-dim">別人收集到你時看到的名字</span>
         <input
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
@@ -326,7 +349,14 @@ export function ProfileEditor({ initial }: Props) {
 
       <button
         onClick={save}
-        disabled={saved || saving || !iconsComplete || !nickname.trim() || !bio.trim()}
+        disabled={
+          saved ||
+          saving ||
+          !iconsComplete ||
+          !nickname.trim() ||
+          !realName.trim() ||
+          !bio.trim()
+        }
         className="tap-target glow-neon sticky bottom-[var(--safe-bottom)] rounded-sm bg-neon py-3 font-bold text-void disabled:bg-line disabled:text-faint disabled:shadow-none"
       >
         {saved ? "已儲存，返回中…" : saving ? "儲存中…" : "儲存"}

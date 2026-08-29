@@ -16,6 +16,8 @@ _Avoid_: 結束, 關閉, 刪除
 
 **Participant（參與者）**:
 在單一 Event 中參與收集的人。身分繫於該場 Event，不跨 Event 延續；Event 封存後身分依然可用於查看該場收集成果，但無法再進行收集。
+一位 Participant 有兩個名字：**姓名**與**暱稱**。姓名是必填的真實姓名，僅 Admin 可見，供現場核對身分與發放獎品；暱稱是對外顯示的名稱，出現在 Card 上。兩者不可互相替代——取暱稱的人往往正是不想讓全場看到本名的人。
+一個 Email 在單一 Event 內至多對應一位 Participant，否則以 Email 找回身分的查詢就沒有唯一答案。未填 Email 者不受此限。
 _Avoid_: User, 會員, 帳號
 
 **Role（身分）**:
@@ -33,7 +35,7 @@ _Avoid_: 主辦方, Staff
 ### 收集
 
 **Profile（個人資料）**:
-一位 Participant 在某場 Event 中對外呈現的自我描述：頭像、暱稱、一則 https 社群連結、三個個性化圖示，以及一句話自我介紹。因身分不跨 Event，Profile 亦不跨 Event 延續。
+一位 Participant 在某場 Event 中對外呈現的自我描述：頭像、暱稱、一則 https 社群連結、三個個性化圖示，以及一句話自我介紹。因身分不跨 Event，Profile 亦不跨 Event 延續。姓名與 Email 不屬於 Profile——它們不對外呈現。
 _Avoid_: 個人檔案, 名片資料
 
 **Card（卡片）**:

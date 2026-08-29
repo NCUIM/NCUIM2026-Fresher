@@ -5,6 +5,7 @@ import { useState } from "react";
 type Participant = {
   id: string;
   nickname: string;
+  realName: string | null;
   role: string;
   bio: string | null;
   socialUrl: string | null;
@@ -163,6 +164,16 @@ export function AdminDashboard({
             <li key={p.id} className="rounded-xl border border-line p-3">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{p.nickname}</span>
+                {/*
+                  現場核對身分靠的是這個，不是暱稱。
+                  報到前就存在的參與者沒有姓名，標示出來讓工作人員知道
+                  要當面問，而不是以為系統壞了。
+                */}
+                {p.realName ? (
+                  <span className="text-xs text-dim">{p.realName}</span>
+                ) : (
+                  <span className="text-xs text-faint">姓名未填</span>
+                )}
                 {p.role === "STAFF" && (
                   <span className="rounded-full bg-moon px-2 py-0.5 text-[10px] text-void">
                     工作人員

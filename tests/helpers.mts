@@ -147,7 +147,9 @@ export async function joinAs(
   const res = await fetch(`${BASE}/api/join`, {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ ...DEFAULT_JOIN, nickname, ...overrides }),
+    // 姓名為必填。測試關心的是暱稱，這裡直接沿用，
+    // 需要區分兩者的測試再自行覆寫。
+    body: JSON.stringify({ ...DEFAULT_JOIN, nickname, realName: nickname, ...overrides }),
   });
   const body = await res.json();
   if (res.status !== 201) {

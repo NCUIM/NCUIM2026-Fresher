@@ -6,6 +6,7 @@ import {
   createHostAdmin,
   disconnect,
   get,
+  joinAs,
   loginAs,
   post,
   removeTestAdmins,
@@ -71,6 +72,72 @@ describe("管理員分級", () => {
         created._count.achievements > 0,
         "沒有成就，整場計分就只剩基礎分",
       );
+    });
+
+    it("可以刪除沒有參與者的活動", async () => {
+      const cookie = await loginAs("admin", "change-me");
+      const created = await post(
+        "/api/admin/events",
+        {
+          name: "測試用活動（待刪）",
+          passcode: "x",
+          startsAt: new Date().toISOString(),
+          teamCount: 0,
+          basePoints: 10,
+          leaderboardTopN: 10,
+        },
+        cookie,
+      );
+
+      const res = await send(
+        "DELETE",
+        `/api/admin/events/${created.body.id}`,
+        undefined,
+        cookie,
+      );
+
+      assert.equal(res.status, 200);
+    });
+
+    /*
+      Event 是整張圖的根，cascade 會一路帶走參與者與所有短評。
+      有資料的活動必須走 封存 → 保留期 → db:purge，不能一鍵刪掉。
+    */
+    it("有參與者的活動不能直接刪除", async () => {
+      const cookie = await loginAs("admin", "change-me");
+      await joinAs("陳小明");
+
+      const list = await get("/api/admin/events", cookie);
+      const seeded = list.body.events.find(
+        (e: { _count: { participants: number } }) => e._count.participants > 0,
+      );
+
+      const res = await send(
+        "DELETE",
+        `/api/admin/events/${seeded.id}`,
+        undefined,
+        cookie,
+      );
+
+      assert.equal(res.status, 409);
+      assert.ok(
+        res.body.error.includes("purge"),
+        "要告訴管理員正確的路徑是什麼，不能只說不行",
+      );
+    });
+
+    it("被擋下後資料完好無損", async () => {
+      const cookie = await loginAs("admin", "change-me");
+      const ming = await joinAs("陳小明");
+
+      const list = await get("/api/admin/events", cookie);
+      const seeded = list.body.events.find(
+        (e: { _count: { participants: number } }) => e._count.participants > 0,
+      );
+      await send("DELETE", `/api/admin/events/${seeded.id}`, undefined, cookie);
+
+      const me = await get("/api/me", ming.cookie);
+      assert.equal(me.status, 200, "刪除被擋下就不該有任何副作用");
     });
 
     it("可以管理帳號", async () => {
@@ -309,6 +376,24 @@ describe("管理員分級", () => {
       });
 
       assert.equal(res.status, 200, "指派之後就該進得去，否則上面的 404 沒有意義");
+    });
+
+    it("不能刪除活動", async () => {
+      const superCookie = await loginAs("admin", "change-me");
+      const otherEventId = await secondEventId(superCookie);
+      const hostId = await createHostAdmin("test-host", "hostpass123");
+      // 就算被指派了那一場，刪除仍然只有總管理員能做。
+      await assignHost(hostId, otherEventId);
+      const cookie = await loginAs("test-host", "hostpass123");
+
+      const res = await send(
+        "DELETE",
+        `/api/admin/events/${otherEventId}`,
+        undefined,
+        cookie,
+      );
+
+      assert.equal(res.status, 403);
     });
 
     it("不能指派主持人", async () => {

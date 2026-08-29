@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { iconByKey } from "@/lib/icons";
 import { zodiacByKey } from "@/lib/zodiac";
+import { ParticipantDetail } from "./ParticipantDetail";
 
 /**
  * Participant 的完整內容，唯一的例外是 sessionToken。
@@ -94,6 +95,8 @@ export function AdminDashboard({
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [teamFilter, setTeamFilter] = useState<TeamFilter>("all");
+  // 同時只有一位參與者的私人內容被載入，關掉就卸載。
+  const [openDetail, setOpenDetail] = useState<string | null>(null);
 
   // 組別選項取自實際資料，而不是寫死 1–10：組數是後台可調的。
   const teamNumbers = useMemo(
@@ -351,7 +354,7 @@ export function AdminDashboard({
                   setRoleFilter("all");
                   setTeamFilter("all");
                 }}
-                className="text-xs text-faint underline"
+                className="tap-target rounded-sm border border-line px-2.5 text-xs text-dim transition-colors hover:border-neon/60 hover:text-chalk"
               >
                 清除條件
               </button>
@@ -495,16 +498,39 @@ export function AdminDashboard({
                       <Stat label="成就" value={p._count.achievements} />
                     </div>
 
+                    {/*
+                      再收合一層。短評是私人內容（ADR-0003），不該在後台
+                      隨手一滑就整片攤在畫面上——要看的人必須有意識地打開它。
+                      也因為如此，資料是展開時才去取的。
+                    */}
+                    <details
+                      onToggle={(e) =>
+                        setOpenDetail(
+                          (e.currentTarget as HTMLDetailsElement).open ? p.id : null,
+                        )
+                      }
+                      className="rounded-lg border border-line px-3 py-2"
+                    >
+                      <summary className="cursor-pointer text-xs text-dim">
+                        查看漂浮牆與九宮格
+                      </summary>
+                      <div className="mt-2">
+                        {openDetail === p.id && (
+                          <ParticipantDetail participantId={p.id} />
+                        )}
+                      </div>
+                    </details>
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => issueRescue(p)}
-                        className="rounded-lg border border-line px-3 py-1.5 text-xs transition-colors hover:border-neon/50"
+                        className="tap-target rounded-lg border border-line px-3 py-1.5 text-xs transition-colors hover:border-neon hover:bg-neon/10 hover:text-neon"
                       >
                         協助找回身分
                       </button>
                       <button
                         onClick={() => moderate(p)}
-                        className="rounded-lg border border-flare/60 px-3 py-1.5 text-xs text-flare transition-colors hover:bg-flare/10"
+                        className="tap-target rounded-lg border border-flare/60 px-3 py-1.5 text-xs text-flare transition-colors hover:bg-flare/20"
                       >
                         清除違規內容
                       </button>

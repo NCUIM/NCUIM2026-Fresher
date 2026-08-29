@@ -59,7 +59,7 @@ export function MailLog({ eventId }: { eventId: string }) {
     <section className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
         <h2 className="font-medium">寄信紀錄</h2>
-        <button onClick={load} className="text-xs text-faint underline">
+        <button onClick={load} className="tap-target rounded-sm border border-line px-2.5 text-xs text-dim transition-colors hover:border-neon/60 hover:text-chalk">
           重新整理
         </button>
       </div>

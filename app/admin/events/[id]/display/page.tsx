@@ -42,7 +42,7 @@ export default async function DisplayPage(
       <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
         <h1 className="text-2xl font-black">這場活動沒有一般參與者的報到碼</h1>
         <p className="text-sm text-dim">請先於後台建立。</p>
-        <Link href={`/admin/events/${event.id}`} className="text-sm text-neon underline">
+        <Link href={`/admin/events/${event.id}`} className="tap-target rounded-lg border border-neon px-4 py-2 text-sm font-bold text-neon transition-colors hover:bg-neon hover:text-void">
           回到後台
         </Link>
       </main>
@@ -96,7 +96,7 @@ export default async function DisplayPage(
           已報到 {event._count.participants} 人
         </p>
         <p className="text-xs break-all text-faint/70">{joinUrl}</p>
-        <Link href={`/admin/events/${event.id}`} className="mt-2 text-xs text-faint underline">
+        <Link href={`/admin/events/${event.id}`} className="tap-target mt-2 rounded-sm border border-line px-3 py-1 text-xs text-faint transition-colors hover:border-neon/60 hover:text-chalk">
           回到後台
         </Link>
       </footer>

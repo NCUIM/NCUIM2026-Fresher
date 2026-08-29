@@ -46,7 +46,7 @@ export function CollectReveal({
       }
       setSaved(true);
     } catch {
-      setError("連線失敗，稍後可以到「待寫」補完");
+      setError("連線失敗，稍後可以到「寫短評」補完");
     } finally {
       setSaving(false);
     }
@@ -135,7 +135,7 @@ export function CollectReveal({
           </button>
 
           <p className="text-center text-[11px] text-faint">
-            現在不方便？之後可以到底部的「待寫」補完
+            現在不方便？之後可以到底部的「寫短評」補完
           </p>
         </div>
       )}

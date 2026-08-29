@@ -82,6 +82,58 @@ export function EventOverview({
     }
   }
 
+  async function toggleArchive(e: EventRow) {
+    const archiving = e.status === "ACTIVE";
+    if (
+      !confirm(
+        archiving
+          ? `確定要封存「${e.name}」？\n\n` +
+              "報到與收集會關閉，短評也不能再修改，但大家仍然看得到已收集的成果。\n" +
+              "若是誤按，可以在同一個位置重新開放。"
+          : `確定要重新開放「${e.name}」？\n\n` +
+              "報到、收集與短評會再次開啟，十四天的保留期限也會一併取消。",
+      )
+    )
+      return;
+
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/admin/archive", {
+      method: archiving ? "POST" : "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: e.id }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError(archiving ? "封存失敗" : "重新開放失敗");
+      return;
+    }
+    setNotice(archiving ? `已封存「${e.name}」` : `已重新開放「${e.name}」`);
+    router.refresh();
+  }
+
+  async function remove(e: EventRow) {
+    if (
+      !confirm(
+        `確定要刪除「${e.name}」？\n\n` +
+          "這個動作無法復原，該活動的註冊碼、分組與成就設定都會一併消失。",
+      )
+    )
+      return;
+
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/events/${e.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "刪除失敗");
+      return;
+    }
+    setNotice(`已刪除「${e.name}」`);
+    router.refresh();
+  }
+
   async function saveHosts(e: EventRow, hostIds: string[]) {
     setBusy(true);
     setError(null);
@@ -160,10 +212,35 @@ export function EventOverview({
                 </Link>
                 <button
                   onClick={() => setAssigning(assigning === e.id ? null : e.id)}
-                  className="rounded-lg border border-line px-3 py-1.5 text-xs transition-colors hover:border-neon/50"
+                  className="tap-target rounded-lg border border-line px-3 py-1.5 text-xs transition-colors hover:border-neon hover:bg-neon/10 hover:text-neon"
                 >
                   指派主持人
                 </button>
+                <button
+                  onClick={() => toggleArchive(e)}
+                  disabled={busy}
+                  className="rounded-lg border border-moon/60 px-3 py-1.5 text-xs text-moon transition-colors hover:bg-moon/10 disabled:opacity-50"
+                >
+                  {e.status === "ACTIVE" ? "封存" : "重新開放"}
+                </button>
+                {/*
+                  有參與者的活動不提供刪除按鈕。後端也會擋，但在畫面上就
+                  不給這顆按鈕更好——避免有人按下去、看到錯誤、才開始思考
+                  自己剛剛差點做了什麼。
+                */}
+                {e._count.participants === 0 ? (
+                  <button
+                    onClick={() => remove(e)}
+                    disabled={busy}
+                    className="rounded-lg border border-flare/60 px-3 py-1.5 text-xs text-flare transition-colors hover:bg-flare/10 disabled:opacity-50"
+                  >
+                    刪除
+                  </button>
+                ) : (
+                  <span className="self-center text-[11px] text-faint">
+                    有參與者，需先封存並清除個資才能刪除
+                  </span>
+                )}
               </div>
 
               {assigning === e.id && (

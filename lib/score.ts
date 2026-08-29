@@ -75,3 +75,34 @@ export async function pendingImpressions(
     nickname: c.subject.nickname,
   }));
 }
+
+export type WrittenImpression = PendingImpression & { text: string };
+
+/**
+ * 自己已經寫出去的 Impression。
+ *
+ * 規格說每組收集關係的短評「可修改」，API 也一直是 upsert；
+ * 但寫完的人會從待寫清單消失，介面上沒有任何路徑回得去——
+ * 於是「可修改」在實作上等於做不到。這個查詢就是那條路。
+ *
+ * 只回傳自己寫的。作者無從得知對方是否隱藏了它（ADR-0003），
+ * 所以這裡不帶 hiddenBySubject。
+ */
+export async function writtenImpressions(
+  participantId: string,
+): Promise<WrittenImpression[]> {
+  const rows = await prisma.impression.findMany({
+    where: { authorId: participantId },
+    select: {
+      text: true,
+      subject: { select: { id: true, nickname: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return rows.map((r) => ({
+    subjectId: r.subject.id,
+    nickname: r.subject.nickname,
+    text: r.text,
+  }));
+}

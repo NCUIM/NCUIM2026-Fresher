@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { toCardView } from "@/lib/cards";
-import { CardDisplay } from "@/components/card/CardDisplay";
+import { CardGrid } from "@/components/card/CardGrid";
 import { NavShell } from "@/components/layout/NavShell";
 
 export default async function CollectionPage(props: PageProps<"/collection">) {
@@ -26,6 +26,13 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
 
   return (
     <NavShell>
+      <Link
+        href="/me"
+        className="tap-target -mb-1 inline-flex items-center gap-1 self-start text-sm text-faint"
+      >
+        ← 回到個人頁面
+      </Link>
+
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-black">收集清單</h1>
         <span className="px text-glow-neon text-sm text-neon">
@@ -51,13 +58,10 @@ export default async function CollectionPage(props: PageProps<"/collection">) {
             : "還沒有收集到任何人，去掃描別人的 QR Code 吧！"}
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {collections.map((c) => (
-            <li key={c.id}>
-              <CardDisplay card={toCardView(c.subject)} />
-            </li>
-          ))}
-        </ul>
+        <CardGrid
+          cards={collections.map((c) => toCardView(c.subject))}
+          eventName={me.event.name}
+        />
       )}
     </NavShell>
   );

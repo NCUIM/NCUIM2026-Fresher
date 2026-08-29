@@ -2,13 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
-import { iconByKey } from "@/lib/icons";
-import { zodiacByKey } from "@/lib/zodiac";
 import { computeScore, pendingImpressions } from "@/lib/score";
 import { listAnnouncements } from "@/lib/announcements";
 import { getShowcase } from "@/lib/showcase";
-import { SHOWCASE_SIZE } from "@/lib/validation";
+import { toCardView } from "@/lib/cards";
+import { CardDisplay } from "@/components/card/CardDisplay";
 import { NavShell } from "@/components/layout/NavShell";
+import { ShowcaseGrid } from "@/components/showcase/ShowcaseGrid";
+import { EditLink } from "@/components/layout/EditLink";
 
 /**
  * 個人主頁：身分、分數、九宮格、收集到的卡片。
@@ -37,62 +38,18 @@ export default async function MePage() {
 
   return (
     <NavShell>
-      {/* 身分 */}
-      <header className="flex flex-col items-center gap-2 pt-2">
-        {me.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={me.avatarUrl}
-            alt=""
-            className="size-20 rounded-full border border-neon/60 object-cover"
-          />
-        ) : (
-          <div className="grid size-20 place-items-center rounded-full border border-neon/60 bg-void text-2xl text-neon">
-            {me.nickname.slice(0, 1)}
-          </div>
-        )}
+      {/*
+        最上方直接放自己的卡牌，而不是另外排一組頭像＋暱稱＋圖示。
 
-        <h1 className="text-2xl font-black">{me.nickname}</h1>
-
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {me.role === "STAFF" && (
-            <span className="px rounded-sm border border-moon px-2 py-0.5 text-[10px] text-moon">
-              STAFF
-            </span>
-          )}
-          {me.team && (
-            <span className="px rounded-sm border border-neon px-2 py-0.5 text-[10px] text-neon">
-              TEAM {String(me.team.number).padStart(2, "0")}
-            </span>
-          )}
+        這一頁先前手工重刻了一次卡片的內容，於是卡片改版時兩邊就會走鐘；
+        更重要的是，使用者在這裡看到的必須**就是別人收集到的那一張**——
+        底色與頭像都是他自己選的，要能立刻確認選出來的效果。
+      */}
+      <header className="flex flex-col items-center gap-3 pt-2">
+        <div className="w-full max-w-sm">
+          <CardDisplay card={toCardView(me)} eventName={me.event.name} />
         </div>
-
-        <div className="flex gap-2 text-2xl">
-          {me.icons.map((key) => (
-            <span key={key}>{iconByKey(key)?.emoji}</span>
-          ))}
-        </div>
-
-        {(me.zodiac || me.university) && (
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-dim">
-            {me.zodiac && (
-              <span className="rounded-sm border border-line px-2 py-0.5">
-                {zodiacByKey(me.zodiac)?.emoji} {zodiacByKey(me.zodiac)?.label}
-              </span>
-            )}
-            {me.university && (
-              <span className="rounded-sm border border-line px-2 py-0.5">
-                {me.university}
-              </span>
-            )}
-          </div>
-        )}
-
-        {me.bio && <p className="text-center text-sm text-dim">{me.bio}</p>}
-
-        <Link href="/profile" className="text-xs text-faint underline">
-          編輯個人資料
-        </Link>
+        <EditLink href="/profile" label="編輯個人資料" />
       </header>
 
       {/*
@@ -107,7 +64,7 @@ export default async function MePage() {
             <li className="flex gap-3">
               <span className="px shrink-0 text-neon">01</span>
               <span>
-                找到一個人，其中一個出示<strong className="text-chalk">我的碼</strong>、
+                找到一個人，其中一個出示<strong className="text-chalk">QRCode</strong>、
                 另一個用<strong className="text-chalk">掃描</strong>——一次就雙方互相收集。
               </span>
             </li>
@@ -180,84 +137,35 @@ export default async function MePage() {
       <section className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
           <h2 className="font-bold">我的九宮格</h2>
-          <Link href="/showcase" className="text-xs text-neon underline">
-            編輯
-          </Link>
+          <EditLink href="/showcase" tone="neon" />
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {
-            const slot = showcase[i];
-            return slot ? (
-              <Link
-                key={slot.subjectId}
-                href="/showcase"
-                className="grid aspect-square place-items-center rounded-lg border border-neon/60 bg-slate p-1 text-center text-[11px] leading-tight text-neon"
-              >
-                {slot.card.nickname}
-              </Link>
-            ) : (
-              <span
-                key={i}
-                className="px grid aspect-square place-items-center rounded-lg border border-dashed border-line text-[11px] text-faint"
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-            );
-          })}
-        </div>
+        {/* 依 position 排格子，空格由元件自行補上（getShowcase 只回傳有內容的）。 */}
+        <ShowcaseGrid slots={showcase} eventName={me.event.name} />
       </section>
 
-      {/* 收集到的卡片 */}
-      <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between">
-          <h2 className="font-bold">
-            收集到的卡片
-            <span className="px ml-2 text-sm text-neon">
-              {String(collections.length).padStart(2, "0")}
-            </span>
-          </h2>
-          {collections.length > 0 && (
-            <Link href="/collection" className="text-xs text-neon underline">
-              查看全部
-            </Link>
-          )}
-        </div>
+      {/*
+        收集到的卡片不在這裡展開，只留一個入口。
 
-        {collections.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-faint">
-            還沒有收集到任何人
-            <br />
-            去掃描別人的 QR Code 吧
-          </p>
-        ) : (
-          <ul className="grid grid-cols-4 gap-2">
-            {collections.map((c) => (
-              <li key={c.id}>
-                <Link
-                  href="/collection"
-                  className="flex flex-col items-center gap-1"
-                >
-                  {c.subject.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.subject.avatarUrl}
-                      alt=""
-                      className="aspect-square w-full rounded-lg border border-line object-cover"
-                    />
-                  ) : (
-                    <span className="grid aspect-square w-full place-items-center rounded-lg border border-line bg-slate text-lg text-dim">
-                      {c.subject.nickname.slice(0, 1)}
-                    </span>
-                  )}
-                  <span className="w-full truncate text-center text-[10px] text-dim">
-                    {c.subject.nickname}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        個人頁已經有分數、九宮格、公告與各種提示；卡片一多，這一頁就變成
+        一面需要一直捲的長牆，而每一區都被壓縮到看不清楚。卡片本身有專屬
+        的頁面，那裡才有足夠的空間讓它們像卡片。
+      */}
+      <Link
+        href="/collection"
+        className="tap-target flex items-center justify-between rounded-xl border border-line surface px-4 py-3.5 transition-colors hover:border-neon/50"
+      >
+        <span className="flex flex-col">
+          <span className="font-bold">收集到的卡片</span>
+          <span className="text-xs text-faint">
+            {collections.length === 0
+              ? "還沒有收集到任何人，去掃描別人的 QR Code 吧"
+              : "點開看每一張的完整內容"}
+          </span>
+        </span>
+        <span className="px text-glow-neon shrink-0 text-lg text-neon">
+          {String(collections.length).padStart(2, "0")}
+        </span>
+      </Link>
 
       {/* 次要入口 */}
       <div className="grid grid-cols-3 gap-2 pt-1">
@@ -286,7 +194,6 @@ export default async function MePage() {
         </Link>
       </div>
 
-      <p className="text-center text-[11px] text-faint">{me.event.name}</p>
     </NavShell>
   );
 }

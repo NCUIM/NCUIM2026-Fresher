@@ -28,9 +28,32 @@ export async function getLeaderboard(
 ): Promise<LeaderboardView> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { basePoints: true, leaderboardTopN: true },
+    select: { leaderboardTopN: true },
   });
   if (!event) return { top: [], me: null, totalRanked: 0 };
+
+  const entries = await rankAll(eventId);
+
+  return {
+    top: entries.slice(0, event.leaderboardTopN),
+    me: entries.find((e) => e.participantId === viewerId) ?? null,
+    totalRanked: entries.length,
+  };
+}
+
+/**
+ * 完整排名，不截斷。
+ *
+ * **只給 Admin 用。** 對參與者公開完整榜單等於把最後一名昭告全場，
+ * 而這是一場希望新生互相認識的活動——那正是 getLeaderboard 只回傳
+ * 前 N 名的理由。後台的需求相反：要看得到每一個人才能掌握全場狀況。
+ */
+export async function rankAll(eventId: string): Promise<LeaderboardEntry[]> {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { basePoints: true },
+  });
+  if (!event) return [];
 
   const participants = await prisma.participant.findMany({
     where: { eventId, role: "PARTICIPANT" },
@@ -72,16 +95,10 @@ export async function getLeaderboard(
   const rankOf = (score: number) =>
     scored.filter((s) => s.score > score).length + 1;
 
-  const entries: LeaderboardEntry[] = scored.map((s) => ({
+  return scored.map((s) => ({
     rank: rankOf(s.score),
     participantId: s.participantId,
     nickname: s.nickname,
     score: s.score,
   }));
-
-  return {
-    top: entries.slice(0, event.leaderboardTopN),
-    me: entries.find((e) => e.participantId === viewerId) ?? null,
-    totalRanked: entries.length,
-  };
 }

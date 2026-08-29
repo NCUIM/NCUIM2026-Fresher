@@ -103,6 +103,66 @@ describe("隱藏與回報", () => {
     assert.ok(!leaked.includes("report"), `回應洩漏了回報狀態：${leaked}`);
   });
 
+  /*
+    隱藏是一按就生效的動作。不可還原的話，誤觸或一時情緒下的決定
+    就會變成永久的損失，而那則內容本人再也看不到。
+  */
+  it("隱藏之後可以還原", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await meetAndWrite(ming, hua, "其實還不錯的一句話");
+
+    const before = await get("/api/impressions/received", hua.cookie);
+    const id = before.body.impressions[0].id;
+    await post("/api/impressions/hide", { impressionId: id }, hua.cookie);
+
+    const res = await post(
+      "/api/impressions/hide",
+      { impressionId: id, hidden: false },
+      hua.cookie,
+    );
+
+    assert.equal(res.status, 200);
+    const after = await get("/api/impressions/received", hua.cookie);
+    assert.equal(after.body.impressions.length, 1, "還原後應該回到牆上");
+  });
+
+  it("可以只回報而不隱藏", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await meetAndWrite(ming, hua, "需要主辦方看一下的內容");
+
+    const before = await get("/api/impressions/received", hua.cookie);
+    const id = before.body.impressions[0].id;
+
+    const res = await post("/api/impressions/report", { impressionId: id }, hua.cookie);
+
+    assert.equal(res.status, 200);
+    const after = await get("/api/impressions/received", hua.cookie);
+    assert.equal(
+      after.body.impressions.length,
+      1,
+      "回報是「請你們處理」，不等於「我不想看到」——兩者綁在一起會逼人二選一",
+    );
+  });
+
+  it("別人不能回報不是寫給自己的內容", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    const nosy = await joinAs("愛偷看的人");
+    await meetAndWrite(ming, hua, "小華專屬");
+
+    const received = await get("/api/impressions/received", hua.cookie);
+
+    const res = await post(
+      "/api/impressions/report",
+      { impressionId: received.body.impressions[0].id },
+      nosy.cookie,
+    );
+
+    assert.equal(res.status, 404);
+  });
+
   it("別人不能隱藏不是寫給自己的內容", async () => {
     const ming = await joinAs("陳小明");
     const hua = await joinAs("林小華");

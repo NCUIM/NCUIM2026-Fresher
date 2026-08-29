@@ -72,6 +72,90 @@ describe("封存", () => {
     assert.equal(res.status, 409);
   });
 
+  /*
+    短評凍結。兩件事同時被守住：
+    分數不會在活動結束後還變動，牆面也不會在別人回頭細看時被改掉。
+  */
+  it("封存後不能再寫短評", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await scan(ming, hua);
+    const adminCookie = await loginAsAdmin();
+
+    await post("/api/admin/archive", {}, adminCookie);
+
+    const res = await post(
+      "/api/impressions",
+      { subjectId: hua.id, text: "封存後才寫的" },
+      ming.cookie,
+    );
+    assert.equal(res.status, 409);
+    assert.equal(res.body.reason, "archived");
+  });
+
+  it("封存後不能修改已經寫過的短評", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await scan(ming, hua);
+    await post("/api/impressions", { subjectId: hua.id, text: "原本的" }, ming.cookie);
+    const adminCookie = await loginAsAdmin();
+
+    await post("/api/admin/archive", {}, adminCookie);
+
+    const res = await post(
+      "/api/impressions",
+      { subjectId: hua.id, text: "偷偷改掉" },
+      ming.cookie,
+    );
+    assert.equal(res.status, 409);
+
+    const wall = await get("/api/impressions/received", hua.cookie);
+    assert.equal(
+      wall.body.impressions[0].text,
+      "原本的",
+      "收件人無從得知內容變過，所以封存後那面牆必須是穩定的",
+    );
+  });
+
+  it("封存後補寫不會改變分數", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await scan(ming, hua);
+    const adminCookie = await loginAsAdmin();
+    await post("/api/admin/archive", {}, adminCookie);
+    const before = await get("/api/me", ming.cookie);
+
+    await post(
+      "/api/impressions",
+      { subjectId: hua.id, text: "補寫加分" },
+      ming.cookie,
+    );
+
+    const after = await get("/api/me", ming.cookie);
+    assert.equal(
+      after.body.score.total,
+      before.body.score.total,
+      "允許事後補寫等於讓排行榜在活動結束後還會變動",
+    );
+  });
+
+  it("封存後仍看得到自己寫過的短評", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await scan(ming, hua);
+    await post("/api/impressions", { subjectId: hua.id, text: "很高興認識你" }, ming.cookie);
+    const adminCookie = await loginAsAdmin();
+
+    await post("/api/admin/archive", {}, adminCookie);
+
+    const wall = await get("/api/impressions/received", hua.cookie);
+    assert.equal(
+      wall.body.impressions[0].text,
+      "很高興認識你",
+      "凍結的是修改，不是查看——封存不等於刪除",
+    );
+  });
+
   it("設定十四天後的刪除日期", async () => {
     const adminCookie = await loginAsAdmin();
 

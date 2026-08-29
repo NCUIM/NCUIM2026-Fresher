@@ -34,16 +34,35 @@ export function QrCamera({ onDecode, fallbackHint }: Props) {
   // 否則只能靠猜的。折疊起來，一般使用者不會被打擾。
   const [diagnostic, setDiagnostic] = useState<string | null>(null);
 
-  // 卸載時務必關閉相機，否則鏡頭指示燈會一直亮著。
-  useEffect(() => {
-    return () => {
-      controlsRef.current?.stop();
-      controlsRef.current = null;
-      busyRef.current = false;
-    };
+  /**
+   * 徹底放開鏡頭。
+   *
+   * 只呼叫 controls.stop() 不夠——必須連 video 上的 MediaStreamTrack
+   * 一起停掉。少了這一步，Android 的相機在系統層仍被佔著，
+   * 下一次取用會失敗並在 logcat 留下 `setPhotoOptions failed`。
+   *
+   * 症狀是「有時掃得到、有時掃不到」：成功與否取決於前一個串流有沒有
+   * 剛好被回收，這種競態每次結果都不一樣。
+   */
+  const stopCamera = useCallback(() => {
+    controlsRef.current?.stop();
+    controlsRef.current = null;
+
+    const video = videoRef.current;
+    const stream = video?.srcObject as MediaStream | null;
+    stream?.getTracks().forEach((t) => t.stop());
+    if (video) video.srcObject = null;
+
+    busyRef.current = false;
   }, []);
 
+  // 卸載時務必關閉相機，否則鏡頭指示燈會一直亮著。
+  useEffect(() => stopCamera, [stopCamera]);
+
   const start = useCallback(async () => {
+    // 重試或重新進入時，先把上一個串流放掉再取用，否則就是在跟自己搶鏡頭。
+    stopCamera();
+
     setProblem(null);
     setPhase("starting");
 
@@ -92,7 +111,21 @@ export function QrCamera({ onDecode, fallbackHint }: Props) {
           if (!decoded || busyRef.current) return;
           busyRef.current = true;
           void Promise.resolve(onDecode(decoded.getText())).then((accepted) => {
-            if (!accepted) busyRef.current = false;
+            if (!accepted) {
+              busyRef.current = false;
+              return;
+            }
+            /*
+              掃到有效內容就立刻主動關掉相機。
+
+              呼叫端接著會導向別的頁面，元件卸載時的清理會跑——但那是在
+              解碼迴圈還在運作時把鏡頭抽走，ZXing 隨後試圖重新設定一個
+              已經被拆掉的裝置，拋出的錯誤沒有人接，直接變成畫面上的
+              `setPhotoOptions failed`。
+
+              自己先停，順序就由我們決定，而不是跟導向賽跑。
+            */
+            stopCamera();
           });
         },
       );
@@ -111,9 +144,11 @@ export function QrCamera({ onDecode, fallbackHint }: Props) {
             ? "unsupported"
             : "failed",
       );
+      // 取用失敗時把可能已經半開的串流收乾淨，不然下一次重試又會撞到自己。
+      stopCamera();
       setPhase("failed");
     }
-  }, [onDecode]);
+  }, [onDecode, stopCamera]);
 
   return (
     <div className="flex flex-col gap-3">

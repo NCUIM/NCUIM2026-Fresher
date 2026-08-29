@@ -4,6 +4,8 @@ import { useState } from "react";
 import { ICON_LIBRARY, REQUIRED_ICON_COUNT } from "@/lib/icons";
 import { BIO_MAX, NICKNAME_MAX, REAL_NAME_MAX } from "@/lib/validation";
 import { UniversityField, ZodiacField } from "./ProfileFields";
+import { CardStylePicker } from "./CardStylePicker";
+import { DEFAULT_CARD_COLOR } from "@/lib/card-colors";
 
 type Props = {
   entryCode: string;
@@ -40,6 +42,8 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
   const [zodiac, setZodiac] = useState("");
   const [university, setUniversity] = useState("");
   const [bio, setBio] = useState("");
+  const [cardColor, setCardColor] = useState(DEFAULT_CARD_COLOR.key);
+  const [presetAvatar, setPresetAvatar] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -79,6 +83,8 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           email: email.trim() || null,
           zodiac: zodiac || null,
           university: university.trim() || null,
+          cardColor,
+          presetAvatar,
           icons,
         }),
       });
@@ -267,6 +273,17 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
         </>
       ) : (
         <>
+          {/*
+            頭像與底色放在第二步最前面。它們是「把卡片變成自己的」那一刻，
+            擺在最前面能把人拉過整個第二步，而不是一進來就按跳過。
+          */}
+          <CardStylePicker
+            avatar={presetAvatar}
+            onAvatarChange={setPresetAvatar}
+            color={cardColor}
+            onColorChange={setCardColor}
+          />
+
           <div className="flex flex-col gap-1.5 rounded-xl border border-moon/40 bg-moon/10 px-4 py-3">
             <span className="text-sm font-bold text-moon">
               強烈建議填寫信箱

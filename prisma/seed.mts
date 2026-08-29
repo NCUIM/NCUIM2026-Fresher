@@ -9,7 +9,7 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
-const DEMO_EVENT_NAME = "NCUIM 2026 新生歡迎會";
+const DEMO_EVENT_NAME = "NCUIM 2026 新生茶會";
 const DEMO_PASSCODE = "1234";
 const DEMO_TEAM_COUNT = 10; // 70 人 ÷ 10 隊 ≈ 每隊 7 人
 const ENTRY_CODE_PARTICIPANT = "JOINNCU1";

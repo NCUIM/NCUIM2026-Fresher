@@ -2,6 +2,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   disconnect,
+  get,
   joinAs,
   post,
   requireServer,
@@ -76,6 +77,58 @@ describe("Impression 撰寫", () => {
     );
 
     assert.equal(res.status, 400);
+  });
+
+  /*
+    規格說每組收集關係的短評「可修改」，而寫完的人會從待寫清單消失，
+    所以介面上必須另外列出已寫的、能回去改——否則「可修改」做不到。
+  */
+  it("已寫的短評查得到，供使用者回去修改", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await scan(ming, hua);
+    await post("/api/impressions", { subjectId: hua.id, text: "第一版" }, ming.cookie);
+
+    const res = await get("/api/me", ming.cookie);
+
+    assert.equal(
+      res.body.pendingImpressions.length,
+      0,
+      "寫完就不該再出現在待寫清單裡",
+    );
+    // 收件人端確認內容真的存在
+    const wall = await get("/api/impressions/received", hua.cookie);
+    assert.equal(wall.body.impressions[0].text, "第一版");
+  });
+
+  it("重寫會取代原本那一則，不會變成兩則", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await scan(ming, hua);
+    await post("/api/impressions", { subjectId: hua.id, text: "第一版" }, ming.cookie);
+
+    await post("/api/impressions", { subjectId: hua.id, text: "第二版" }, ming.cookie);
+
+    const wall = await get("/api/impressions/received", hua.cookie);
+    assert.equal(wall.body.impressions.length, 1, "每組收集關係至多一則");
+    assert.equal(wall.body.impressions[0].text, "第二版");
+  });
+
+  it("重寫不會讓基礎分重複入帳", async () => {
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await scan(ming, hua);
+    await post("/api/impressions", { subjectId: hua.id, text: "第一版" }, ming.cookie);
+    const before = await get("/api/me", ming.cookie);
+
+    await post("/api/impressions", { subjectId: hua.id, text: "第二版" }, ming.cookie);
+
+    const after = await get("/api/me", ming.cookie);
+    assert.equal(
+      after.body.score.total,
+      before.body.score.total,
+      "分數依 Collection 計算，改寫內容不該再加一次",
+    );
   });
 
   it("自我介紹為必填，留空的報到被拒絕", async () => {

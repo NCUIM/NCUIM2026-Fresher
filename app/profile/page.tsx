@@ -24,6 +24,7 @@ export default async function ProfilePage() {
           socialUrl: me.socialUrl,
           icons: me.icons,
           avatarUrl: me.avatarUrl,
+          cardColor: me.cardColor,
           email: me.email,
           emailVerified: me.emailVerified,
           zodiac: me.zodiac,

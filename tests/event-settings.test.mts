@@ -27,7 +27,12 @@ async function patchSettings(cookie: string, body: unknown) {
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
-const DEFAULTS = { passcode: "1234", basePoints: 10, leaderboardTopN: 10 };
+const DEFAULTS = {
+  name: "NCUIM 2026 新生茶會",
+  passcode: "1234",
+  basePoints: 10,
+  leaderboardTopN: 10,
+};
 
 describe("活動設定", () => {
   before(requireServer);
@@ -103,6 +108,30 @@ describe("活動設定", () => {
     const res = await patchSettings(adminCookie, { ...DEFAULTS, passcode: "   " });
 
     assert.equal(res.status, 400, "沒有通關碼等於門戶大開");
+  });
+
+  /*
+    活動名稱會印在卡片上與投影畫面。先前只能在建立時決定，
+    打錯字就得改資料庫——而它是純顯示字串，沒有理由不能改。
+  */
+  it("可以修改活動名稱", async () => {
+    const adminCookie = await loginAsAdmin();
+
+    const res = await patchSettings(adminCookie, {
+      ...DEFAULTS,
+      name: "改過的活動名稱",
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.name, "改過的活動名稱");
+  });
+
+  it("空白的活動名稱被拒絕", async () => {
+    const adminCookie = await loginAsAdmin();
+
+    const res = await patchSettings(adminCookie, { ...DEFAULTS, name: "   " });
+
+    assert.equal(res.status, 400, "沒有名稱的活動在後台清單上分不出是哪一場");
   });
 
   it("修改基礎分會立即反映在分數上", async () => {

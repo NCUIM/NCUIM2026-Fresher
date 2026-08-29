@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin, requireEventAccess } from "@/lib/admin-session";
+import { EventNav } from "@/components/admin/EventNav";
 import { getPublicOrigin } from "@/lib/origin";
 
 /**
@@ -62,6 +63,8 @@ export default async function AdminCodesPage(
         <p className="text-sm text-dim">{event.name}</p>
       </header>
 
+      <EventNav eventId={event.id} eventName={event.name} current="codes" />
+
       <div className="rounded-xl bg-moon/10 px-4 py-3 text-sm text-moon">
         <p className="font-medium">投影或列印前請確認網址</p>
         <p className="mt-1 text-moon/80">
@@ -107,7 +110,7 @@ export default async function AdminCodesPage(
 
       <Link
         href={`/admin/events/${event.id}`}
-        className="tap-target flex items-center justify-center text-sm text-dim"
+        className="tap-target flex items-center justify-center rounded-lg border border-line py-2.5 text-sm text-dim transition-colors hover:border-neon/60 hover:text-chalk"
       >
         回到後台
       </Link>

@@ -12,6 +12,7 @@ _Avoid_: Session, 場次
 
 **Archive（封存）**:
 Event 結束時的狀態轉換：收集功能自此關閉，但 Participant 與 Admin 仍可查看該場 Event 已產生的 Profile 與 Collection。封存不等於刪除。
+Impression 亦於此時凍結：不能再撰寫，也不能再修改。這同時守住兩件事——Score 以「是否撰寫 Impression」為條件，允許事後補寫等於讓 Leaderboard 在活動結束後仍會變動；而封存後的保留期正是大家回頭細看 Impression Wall 的時候，收件人無從得知內容曾被改動，因此那面牆必須是穩定的。
 _Avoid_: 結束, 關閉, 刪除
 
 **Participant（參與者）**:

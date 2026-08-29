@@ -79,6 +79,7 @@ export async function PUT(req: Request) {
   }
   const {
     nickname, realName, socialUrl, bio, icons, email, zodiac, university,
+    cardColor, presetAvatar,
   } = parsed.data;
 
   // 信箱換了就必須重新驗證：舊的驗證狀態只證明了舊位址收得到信。
@@ -106,6 +107,15 @@ export async function PUT(req: Request) {
         email: email ?? null,
         zodiac: zodiac ?? null,
         university: university?.trim() || null,
+        cardColor: cardColor ?? null,
+        /*
+          presetAvatar 未傳時完全不動 avatarUrl。
+
+          上傳的頭像也存在同一個欄位，若這裡無條件覆寫，任何一次
+          個人資料存檔都會把使用者剛上傳的照片清掉。
+          傳 null 才是明確表示「不要頭像」。
+        */
+        ...(presetAvatar !== undefined ? { avatarUrl: presetAvatar } : {}),
         ...(emailChanged ? { emailVerified: false } : {}),
       },
       select: {

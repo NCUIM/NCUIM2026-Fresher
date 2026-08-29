@@ -2,35 +2,52 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/admin-session";
+import { EventOverview } from "@/components/admin/EventOverview";
 
 /**
- * 選擇要操作哪一場活動。
+ * 活動路口：所有活動的清單、建立、封存、刪除與指派主持人。
  *
- * 兩種身分都能用，但看到的清單不同：總管理員看得到全部，
- * 主持人只看得到被指派的。**這個 where 條件就是隔離本身**——
- * 不是靠畫面上少畫幾個項目，而是資料庫根本不回傳。
+ * 兩種身分看到的東西不同。總管理員在這裡管理全部；主持人只是選擇要進
+ * 哪一場——**清單的 where 條件就是隔離本身**，不是靠畫面少畫幾個項目，
+ * 而是資料庫根本不回傳別人的場次。
  */
-export default async function EventPickerPage() {
+export default async function EventsPage() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const events = await prisma.event.findMany({
-    where:
-      admin.role === "SUPER"
-        ? {}
-        : { hosts: { some: { adminId: admin.id } } },
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      name: true,
-      status: true,
-      startsAt: true,
-      _count: { select: { participants: true } },
-    },
-  });
+  const isSuper = admin.role === "SUPER";
+
+  const [events, hosts] = await Promise.all([
+    prisma.event.findMany({
+      where: isSuper ? {} : { hosts: { some: { adminId: admin.id } } },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        startsAt: true,
+        archivedAt: true,
+        purgeAfter: true,
+        teamCount: true,
+        basePoints: true,
+        leaderboardTopN: true,
+        _count: {
+          select: { participants: true, teams: true, achievements: true },
+        },
+        hosts: { select: { admin: { select: { id: true, username: true } } } },
+      },
+    }),
+    isSuper
+      ? prisma.admin.findMany({
+          where: { role: "HOST" },
+          orderBy: { username: "asc" },
+          select: { id: true, username: true },
+        })
+      : Promise.resolve([]),
+  ]);
 
   // 主持人只被指派一場時，選單沒有意義，直接送他進去。
-  if (admin.role === "HOST" && events.length === 1) {
+  if (!isSuper && events.length === 1) {
     redirect(`/admin/events/${events[0].id}`);
   }
 
@@ -38,21 +55,31 @@ export default async function EventPickerPage() {
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
       <header className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between">
-          <h1 className="text-xl font-black">選擇活動</h1>
+          <h1 className="text-xl font-black">
+            {isSuper ? "所有活動" : "選擇活動"}
+          </h1>
           <span className="px text-sm text-dim">{admin.username}</span>
         </div>
         <p className="text-xs text-faint">
-          {admin.role === "SUPER"
-            ? `共 ${events.length} 場`
+          {isSuper
+            ? `共 ${events.length} 場。可在這裡建立、封存與刪除活動。`
             : `你被指派了 ${events.length} 場`}
         </p>
       </header>
 
-      {events.length === 0 ? (
+      {isSuper ? (
+        <EventOverview
+          initial={events.map((e) => ({
+            ...e,
+            startsAt: e.startsAt.toISOString(),
+            archivedAt: e.archivedAt?.toISOString() ?? null,
+            purgeAfter: e.purgeAfter?.toISOString() ?? null,
+          }))}
+          hostOptions={hosts}
+        />
+      ) : events.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line px-4 py-12 text-center text-sm text-faint">
-          {admin.role === "SUPER"
-            ? "還沒有任何活動。請到總管理後台建立。"
-            : "你還沒有被指派任何活動，請聯絡總管理員。"}
+          你還沒有被指派任何活動，請聯絡總管理員。
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -84,10 +111,10 @@ export default async function EventPickerPage() {
         </ul>
       )}
 
-      {admin.role === "SUPER" && (
+      {isSuper && (
         <Link
           href="/admin"
-          className="tap-target flex items-center justify-center text-sm text-dim"
+          className="tap-target flex items-center justify-center rounded-lg border border-line py-2.5 text-sm text-dim transition-colors hover:border-neon/60 hover:text-chalk"
         >
           回到總管理後台
         </Link>

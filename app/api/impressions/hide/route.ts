@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentParticipant } from "@/lib/session";
-import { hideImpression } from "@/lib/wall";
+import { reportImpression, setImpressionHidden } from "@/lib/wall";
 import { firstErrorMessage } from "@/lib/validation";
 
 const hideSchema = z.object({
   impressionId: z.string().min(1),
+  /** 省略時視為隱藏，維持先前的呼叫方式。傳 false 即還原顯示。 */
+  hidden: z.boolean().optional().default(true),
   report: z.boolean().optional().default(false),
 });
 
-/** 收件人隱藏一則 Impression，可一併回報給 Admin。 */
+/** 收件人切換一則 Impression 的顯示狀態，可一併回報給 Admin。 */
 export async function POST(req: Request) {
   const me = await getCurrentParticipant();
   if (!me) {
@@ -30,12 +32,9 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+  const { impressionId, hidden, report } = parsed.data;
 
-  const ok = await hideImpression(
-    me.id,
-    parsed.data.impressionId,
-    parsed.data.report,
-  );
+  const ok = await setImpressionHidden(me.id, impressionId, hidden);
 
   if (!ok) {
     // 非收件人與不存在回傳相同結果：否則這個端點會變成「查詢某則
@@ -43,5 +42,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "找不到這則內容" }, { status: 404 });
   }
 
-  return NextResponse.json({ hidden: true });
+  if (report) await reportImpression(me.id, impressionId);
+
+  return NextResponse.json({ hidden });
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 type Settings = {
+  name: string;
   passcode: string;
   basePoints: number;
   leaderboardTopN: number;
@@ -20,6 +21,7 @@ export function EventSettings({
   initial: Settings;
   participantCount: number;
 }) {
+  const [name, setName] = useState(initial.name);
   const [passcode, setPasscode] = useState(initial.passcode);
   const [basePoints, setBasePoints] = useState(String(initial.basePoints));
   const [topN, setTopN] = useState(String(initial.leaderboardTopN));
@@ -39,6 +41,7 @@ export function EventSettings({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId,
+          name,
           passcode,
           basePoints: Number(basePoints),
           leaderboardTopN: Number(topN),
@@ -67,6 +70,18 @@ export function EventSettings({
           活動開始前請務必換掉。
         </p>
       )}
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-bold">活動名稱</span>
+        <span className="text-xs text-faint">
+          會出現在報到頁、投影畫面，以及每一張卡片上。
+        </span>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className={field}
+        />
+      </label>
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-bold">活動通關碼</span>
@@ -123,7 +138,7 @@ export function EventSettings({
 
       <button
         onClick={save}
-        disabled={saving || !passcode.trim()}
+        disabled={saving || !passcode.trim() || !name.trim()}
         className="tap-target rounded-sm border border-neon py-3 font-bold text-neon disabled:border-line disabled:text-faint"
       >
         {saving ? "儲存中…" : "儲存活動設定"}

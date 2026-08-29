@@ -43,7 +43,7 @@ npm run dev
 
 | 項目 | 值 |
 | --- | --- |
-| 活動 | NCUIM 2026 新生歡迎會 |
+| 活動 | NCUIM 2026 新生茶會 |
 | 通關碼 | `1234` |
 | 一般報到碼 | `JOINNCU1` |
 | 工作人員報到碼 | `STAFFNCU` |
@@ -234,7 +234,7 @@ SMTP_PORT="587"
 SMTP_SECURE="false"
 SMTP_USER="you@gmail.com"
 SMTP_PASSWORD="十六碼應用程式密碼"
-SMTP_FROM="NCUIM 新生歡迎會 <you@gmail.com>"
+SMTP_FROM="NCUIM 新生茶會 <you@gmail.com>"
 ```
 
 填完後驗證（**不要靠報到流程來測**，中間任何一步出錯都會被誤判成寄信壞了）：

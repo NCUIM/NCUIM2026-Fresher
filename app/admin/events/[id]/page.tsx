@@ -10,6 +10,7 @@ import { verifyPassword } from "@/lib/password";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { EventSettings } from "@/components/admin/EventSettings";
 import { AchievementEditor } from "@/components/admin/AchievementEditor";
+import { EventNav } from "@/components/admin/EventNav";
 
 /**
  * 單一活動的主持後台。
@@ -86,8 +87,6 @@ export default async function EventAdminPage(
     admin.passwordHash,
   );
 
-  const base = `/admin/events/${event.id}`;
-
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-5 pt-8 pb-[calc(2rem+var(--safe-bottom))]">
       <header className="flex flex-col gap-2">
@@ -105,58 +104,26 @@ export default async function EventAdminPage(
             {participants.length} 人・主持人{" "}
             {admins.length > 0 ? admins.map((a) => a.username).join("、") : "未指派"}
           </span>
-          <Link href="/admin/events" className="ml-auto text-neon underline">
+          <Link
+            href="/admin/events"
+            className="tap-target ml-auto rounded-sm border border-neon/60 px-2.5 text-neon transition-colors hover:bg-neon hover:text-void"
+          >
             切換活動
           </Link>
         </div>
       </header>
 
-      {/* 活動當天最常用的入口 */}
-      <nav className="grid gap-2 sm:grid-cols-2">
-        <Link
-          href={`${base}/display`}
-          className="tap-target glow-neon flex flex-col rounded-xl border border-neon/50 bg-neon/10 px-4 py-3"
-        >
-          <span className="font-bold text-neon">現場投影畫面</span>
-          <span className="text-xs text-dim">大 QR ＋ 大通關碼，打在投影幕上</span>
-        </Link>
-        <Link
-          href={`${base}/codes`}
-          className="tap-target flex flex-col rounded-xl border border-line px-4 py-3"
-        >
-          <span className="font-bold">報到 QR Code</span>
-          <span className="text-xs text-dim">列印或存檔用，含工作人員版</span>
-        </Link>
-
-        <Link
-          href={`${base}/logs`}
-          className={`tap-target flex flex-col rounded-xl border px-4 py-3 sm:col-span-2 ${
-            mailProblems > 0 ? "border-flare/60 bg-flare/10" : "border-line"
-          }`}
-        >
-          <span
-            className={`flex items-center gap-2 font-bold ${
-              mailProblems > 0 ? "text-flare" : ""
-            }`}
-          >
-            系統紀錄
-            {mailProblems > 0 && (
-              <span className="rounded-full bg-flare px-2 py-0.5 text-[10px] text-void">
-                {mailProblems}
-              </span>
-            )}
-          </span>
-          <span className="text-xs text-dim">
-            {mailProblems > 0
-              ? `有 ${mailProblems} 封信沒有送出，點進去看原因`
-              : "寄信結果與失敗原因"}
-          </span>
-        </Link>
-      </nav>
+      <EventNav
+        eventId={event.id}
+        eventName={event.name}
+        current="overview"
+        mailProblems={mailProblems}
+      />
 
       <EventSettings
         eventId={event.id}
         initial={{
+          name: event.name,
           passcode: event.passcode,
           basePoints: event.basePoints,
           leaderboardTopN: event.leaderboardTopN,
@@ -165,6 +132,7 @@ export default async function EventAdminPage(
       />
 
       <AchievementEditor eventId={event.id} />
+
 
       <AdminDashboard
         eventId={event.id}

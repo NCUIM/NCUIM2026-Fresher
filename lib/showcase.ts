@@ -36,37 +36,47 @@ export async function getShowcase(
   }));
 }
 
-/** 整批替換九宮格內容，陣列順序即格子順序。 */
+/**
+ * 整批替換九宮格內容。**陣列索引即格子位置**，null 代表該格留空。
+ *
+ * 允許空格是刻意的：使用者可以把三個人擺在對角線上，那個排法本身就是
+ * 他想表達的東西。若把陣列壓實再依序寫入，位置就會被系統重排，
+ * 拖拉擺放也就失去意義。
+ *
+ * 相容於舊的緊密陣列——沒有 null 時行為與先前完全相同。
+ */
 export async function replaceShowcase(
   ownerId: string,
-  subjectIds: string[],
+  slots: (string | null)[],
 ): Promise<{ ok: true } | { ok: false; reason: ShowcaseError }> {
-  if (subjectIds.length > SHOWCASE_SIZE) {
+  if (slots.length > SHOWCASE_SIZE) {
     return { ok: false, reason: "too_many" };
   }
-  if (new Set(subjectIds).size !== subjectIds.length) {
+
+  const filled = slots
+    .map((subjectId, position) => ({ subjectId, position }))
+    .filter((s): s is { subjectId: string; position: number } => s.subjectId !== null);
+
+  const ids = filled.map((s) => s.subjectId);
+  if (new Set(ids).size !== ids.length) {
     return { ok: false, reason: "duplicate" };
   }
 
   // 只能展示已收集的人：Collection 的存在就是「我們見過面」的證據。
-  const collected = await prisma.collection.count({
-    where: { ownerId, subjectId: { in: subjectIds } },
-  });
-  if (collected !== subjectIds.length) {
-    return { ok: false, reason: "not_collected" };
+  if (ids.length > 0) {
+    const collected = await prisma.collection.count({
+      where: { ownerId, subjectId: { in: ids } },
+    });
+    if (collected !== ids.length) {
+      return { ok: false, reason: "not_collected" };
+    }
   }
 
   // 整批替換而非逐格更新：位置唯一鍵讓部分更新容易撞鍵，
   // 而九格的資料量重建一次的成本可以忽略。
   await prisma.$transaction([
     prisma.showcaseSlot.deleteMany({ where: { ownerId } }),
-    prisma.showcaseSlot.createMany({
-      data: subjectIds.map((subjectId, position) => ({
-        ownerId,
-        subjectId,
-        position,
-      })),
-    }),
+    prisma.showcaseSlot.createMany({ data: filled.map((s) => ({ ownerId, ...s })) }),
   ]);
 
   return { ok: true };

@@ -4,6 +4,7 @@ import {
   disconnect,
   get,
   joinAs,
+  loginAs,
   post,
   requireServer,
   resetParticipants,
@@ -74,6 +75,35 @@ describe("排行榜", () => {
       assert.ok(
         res.body.totalRanked > 2,
         "前提：實際參與排名的人數多於公開名額",
+      );
+    } finally {
+      await setLeaderboardTopN(10);
+    }
+  });
+
+  /*
+    後台看得到全部，參與者只看得到前 N 名。
+    兩者的需求是相反的：公開完整榜單等於把最後一名昭告全場，
+    但後台不看到每一個人就無法掌握全場狀況。
+  */
+  it("後台的排名不受前 N 名限制", async () => {
+    await setLeaderboardTopN(1);
+    try {
+      const winner = await joinAs("冠軍");
+      await earnPoints(winner, 3);
+      const other = await joinAs("落後者");
+      await earnPoints(other, 1);
+
+      const participantView = await get("/api/leaderboard", other.cookie);
+      assert.equal(participantView.body.top.length, 1, "參與者端仍只到第一名");
+
+      const adminCookie = await loginAs("admin", "change-me");
+      const admin = await get("/api/admin/participants", adminCookie);
+
+      // 後台的資料來源是完整排名，這裡以參與者清單間接確認兩人都在同一場
+      assert.ok(
+        admin.body.participants.length >= 2,
+        "後台必須看得到所有參與者，不能被排行榜的公開名次數限制",
       );
     } finally {
       await setLeaderboardTopN(10);

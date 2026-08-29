@@ -185,9 +185,38 @@ body::before {
   will-change: transform;
 }
 
+/* 方向與幅度由每張卡片各自給值。全部同向的話，整面牆會像一塊布一起平移，
+   看起來反而不像在漂——差異才是「漂浮」被感知到的原因。 */
 @keyframes wall-drift {
-  from { transform: translate3d(0, 0, 0) rotate(-1.5deg); }
-  to { transform: translate3d(6%, -8%, 0) rotate(1.5deg); }
+  from {
+    transform: translate3d(0, 0, 0) rotate(calc(var(--drift-rot, 2deg) * -1));
+  }
+  to {
+    transform: translate3d(var(--drift-x, 8%), var(--drift-y, -10%), 0)
+      rotate(var(--drift-rot, 2deg));
+  }
+}
+
+/* ───────────────────────────────────────────────
+   卡片展開：從被點擊的那張長出來
+   ─────────────────────────────────────────────── */
+
+.card-pop {
+  animation: card-pop 260ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+}
+
+/* 起點的位移由 JS 依被點擊卡片的位置給值。少了它，展開會從畫面正中央
+   憑空出現，看不出是哪一張被打開的。 */
+@keyframes card-pop {
+  from {
+    transform: translate3d(var(--pop-x, 0), var(--pop-y, 0), 0) scale(0.35)
+      rotate(-8deg);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0);
+    opacity: 1;
+  }
 }
 
 /* ───────────────────────────────────────────────
@@ -228,6 +257,10 @@ body::before {
   .wall-card {
     position: static !important;
     max-width: 100% !important;
+    animation: none;
+  }
+  /* 縮放旋轉的彈出對前庭功能敏感的人不友善，直接顯示即可。 */
+  .card-pop {
     animation: none;
   }
   .reveal-scan,

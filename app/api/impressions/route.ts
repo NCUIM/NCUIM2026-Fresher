@@ -26,6 +26,22 @@ export async function POST(req: Request) {
   }
   const { subjectId, text } = parsed.data;
 
+  /*
+    封存後不再接受撰寫或修改。
+
+    兩個理由。其一，基礎分以「有沒有寫短評」為條件，允許事後補寫等於
+    讓排行榜在活動結束後還會變動——掃描與報到都擋了，這一支先前漏掉。
+
+    其二，封存之後的十四天才是大家真正回頭細看牆面的時候，而收件人
+    無從得知內容變過。凍結讓那面牆成為不會再變的紀念品。
+  */
+  if (me.event.status !== "ACTIVE") {
+    return NextResponse.json(
+      { error: "活動已經結束，短評不能再修改了", reason: "archived" },
+      { status: 409 },
+    );
+  }
+
   // 只能對已收集的對象撰寫。Collection 的存在就是「我們見過面」的證據，
   // 沒有它就代表雙方沒有互動過，不應該能留下關於對方的文字。
   const collection = await prisma.collection.findUnique({

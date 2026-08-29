@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   }
   const {
     entryCode, passcode, nickname, realName, socialUrl, bio, icons, email,
-    zodiac, university,
+    zodiac, university, cardColor, presetAvatar,
   } = parsed.data;
 
   const entry = await prisma.entryCode.findUnique({
@@ -89,6 +89,9 @@ export async function POST(req: Request) {
           email: email ?? null,
           zodiac: zodiac ?? null,
           university: university?.trim() || null,
+          cardColor: cardColor ?? null,
+          // 預設頭像就是一個靜態路徑，不需要 Avatar 資料列。
+          avatarUrl: presetAvatar ?? null,
         },
         include: { team: true },
       });

@@ -107,6 +107,11 @@ model Participant {
   /// 設成 NOT NULL 得先回填才不會讓它們變成不合法的資料。
   realName String?
 
+  /// 卡片底色的 key（見 lib/card-colors.ts）。
+  /// 自己選，別人收集到你時看到的就是這個顏色——這是卡片上唯一
+  /// 由本人決定、且只影響別人視覺的欄位。未選時以預設色呈現。
+  cardColor String?
+
   // 破冰用的話題線索。兩者都是選填——報到動線已經夠長，
   // 再加必填欄位會讓人在人潮中放棄。
   zodiac     String? // 星座，從固定選項挑選

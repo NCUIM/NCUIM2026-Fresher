@@ -84,3 +84,56 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true, name: event.name });
 }
+
+/**
+ * 刪除活動。**只允許刪除沒有參與者的。**
+ *
+ * Event 是整張圖的根，cascade 會一路帶走 Participant、Collection、
+ * Impression、Team 與所有成就紀錄——這是全系統破壞力最大的一個動作。
+ *
+ * 有資料的活動要走既有的生命週期：封存 → 保留十四天 → npm run db:purge。
+ * 那條路刻意是手動的（見 scripts/purge-expired.mts），就是為了不讓
+ * 大量個資因為一次誤按而消失。purge 完之後參與者歸零，這裡就刪得掉了。
+ *
+ * 所以這個限制不是把功能做小，而是讓「清掉建錯的活動」與
+ * 「銷毀一場真實活動的所有資料」不共用同一顆按鈕。
+ */
+export async function DELETE(
+  _req: Request,
+  ctx: RouteContext<"/api/admin/events/[id]">,
+) {
+  const admin = await getCurrentAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
+  }
+  if (admin.role !== "SUPER") {
+    return NextResponse.json(
+      { error: "只有總管理員可以刪除活動" },
+      { status: 403 },
+    );
+  }
+
+  const { id } = await ctx.params;
+
+  const event = await prisma.event.findUnique({
+    where: { id },
+    select: { id: true, name: true, _count: { select: { participants: true } } },
+  });
+  if (!event) {
+    return NextResponse.json({ error: "找不到這場活動" }, { status: 404 });
+  }
+
+  if (event._count.participants > 0) {
+    return NextResponse.json(
+      {
+        error: `「${event.name}」已經有 ${event._count.participants} 位參與者，不能直接刪除。請先封存，保留期滿後執行 npm run db:purge 清除個資，之後才能刪除這場活動。`,
+        participantCount: event._count.participants,
+      },
+      { status: 409 },
+    );
+  }
+
+  await prisma.event.delete({ where: { id } });
+
+  return NextResponse.json({ ok: true, name: event.name });
+}

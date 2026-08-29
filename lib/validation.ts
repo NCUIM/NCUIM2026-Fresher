@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { AchievementType, Role } from "@prisma/client";
 import { isValidIconKey, REQUIRED_ICON_COUNT } from "./icons";
 import { isValidZodiacKey, UNIVERSITY_MAX } from "./zodiac";
+import { isValidCardColor } from "./card-colors";
+import { isPresetAvatar } from "./avatars";
 
 export const NICKNAME_MAX = 20;
 export const REAL_NAME_MAX = 20;
@@ -75,6 +77,23 @@ export const profileSchema = z.object({
     .optional()
     .nullable(),
   university: z.string().trim().max(UNIVERSITY_MAX).optional().nullable(),
+  cardColor: z
+    .string()
+    .refine(isValidCardColor, { message: "沒有這個卡片底色" })
+    .optional()
+    .nullable(),
+  /*
+    只接受我們自己提供的預設頭像路徑。
+
+    少了這道檢查，任何人都能把 avatarUrl 設成外部網址——那張圖會出現在
+    每一個收集過他的人的卡片上，等於一個可以隨時抽換內容、而且我們
+    管不到的圖床。上傳的頭像走 /api/avatar，不經過這裡。
+  */
+  presetAvatar: z
+    .string()
+    .refine(isPresetAvatar, { message: "沒有這個頭像" })
+    .optional()
+    .nullable(),
 });
 
 export const recoveryRequestSchema = z.object({ email });

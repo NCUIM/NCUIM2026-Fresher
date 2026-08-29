@@ -6,6 +6,9 @@ import { ICON_LIBRARY, REQUIRED_ICON_COUNT } from "@/lib/icons";
 import { resizeToAvatar } from "@/lib/resize-image";
 import { BIO_MAX, NICKNAME_MAX, REAL_NAME_MAX } from "@/lib/validation";
 import { UniversityField, ZodiacField } from "./ProfileFields";
+import { CardStylePicker } from "./CardStylePicker";
+import { DEFAULT_CARD_COLOR } from "@/lib/card-colors";
+import { isPresetAvatar } from "@/lib/avatars";
 
 type Props = {
   initial: {
@@ -15,6 +18,7 @@ type Props = {
     socialUrl: string | null;
     icons: string[];
     avatarUrl: string | null;
+    cardColor: string | null;
     email: string | null;
     emailVerified: boolean;
     zodiac: string | null;
@@ -32,6 +36,9 @@ export function ProfileEditor({ initial }: Props) {
   const [socialUrl, setSocialUrl] = useState(initial.socialUrl ?? "");
   const [icons, setIcons] = useState<string[]>(initial.icons);
   const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
+  const [cardColor, setCardColor] = useState(
+    initial.cardColor ?? DEFAULT_CARD_COLOR.key,
+  );
   const [email, setEmail] = useState(initial.email ?? "");
   const [zodiac, setZodiac] = useState(initial.zodiac ?? "");
   const [university, setUniversity] = useState(initial.university ?? "");
@@ -120,6 +127,15 @@ export function ProfileEditor({ initial }: Props) {
           email: email.trim() || null,
           zodiac: zodiac || null,
           university: university.trim() || null,
+          cardColor,
+          /*
+            只在頭像是預設圖或被清空時才送 presetAvatar。
+            上傳的頭像走 /api/avatar，路徑不在預設清單裡——
+            無條件送過去只會被驗證擋下，而使用者會看到一個看不懂的錯誤。
+          */
+          ...(avatarUrl === null || isPresetAvatar(avatarUrl)
+            ? { presetAvatar: avatarUrl }
+            : {}),
           icons,
         }),
       });
@@ -194,6 +210,15 @@ export function ProfileEditor({ initial }: Props) {
           )}
         </div>
       </section>
+
+      {/* 挑預設頭像與底色。上傳自己的照片仍然可以，兩條路並存。 */}
+      <CardStylePicker
+        avatar={avatarUrl && isPresetAvatar(avatarUrl) ? avatarUrl : null}
+        onAvatarChange={setAvatarUrl}
+        color={cardColor}
+        onColorChange={setCardColor}
+        allowClear
+      />
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium">姓名</span>

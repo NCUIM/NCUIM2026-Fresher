@@ -9,6 +9,12 @@ import {
 import { firstErrorMessage } from "@/lib/validation";
 
 const settingsSchema = z.object({
+  /*
+    活動名稱會印在卡片上，也是後台辨識場次的依據。
+    先前只能在建立時決定，打錯字就得改資料庫——而它是純顯示字串，
+    沒有理由不能改。
+  */
+  name: z.string().trim().min(1, "活動名稱不可為空").max(60),
   passcode: z.string().trim().min(1, "通關碼不可為空").max(32),
   // 全場最多 70 人，任何人最多只能掃到 69 個——基礎分設太高會讓
   // 成就獎勵完全失去份量，因此設上限。
@@ -88,6 +94,7 @@ export async function PATCH(req: Request) {
     where: { id: event.id },
     data: parsed.data,
     select: {
+      name: true,
       passcode: true,
       basePoints: true,
       leaderboardTopN: true,

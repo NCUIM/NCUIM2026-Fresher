@@ -85,6 +85,56 @@ describe("九宮格", () => {
     assert.equal(res.body.slots.length, 1);
   });
 
+  it("空格會被保留，位置不會被壓實", async () => {
+    const ming = await joinAs("陳小明");
+    const [a, b] = await collectOthers(ming, 2);
+
+    // 對角線擺法：第 0 格與第 8 格，中間全空
+    const res = await put(
+      "/api/showcase",
+      { subjectIds: [a.id, null, null, null, null, null, null, null, b.id] },
+      ming.cookie,
+    );
+    assert.equal(res.status, 200);
+
+    const own = await get(`/api/showcase/${ming.id}`, ming.cookie);
+    const positions = own.body.slots.map((s: { position: number }) => s.position);
+    assert.deepEqual(
+      positions.sort((x: number, y: number) => x - y),
+      [0, 8],
+      "擺法本身就是使用者想表達的東西，壓實之後拖拉擺放就失去意義了",
+    );
+  });
+
+  it("全部留空是合法的", async () => {
+    const ming = await joinAs("陳小明");
+    const [a] = await collectOthers(ming, 1);
+    await put("/api/showcase", { subjectIds: [a.id] }, ming.cookie);
+
+    const res = await put(
+      "/api/showcase",
+      { subjectIds: [null, null, null] },
+      ming.cookie,
+    );
+
+    assert.equal(res.status, 200, "清空九宮格不該被當成錯誤");
+    const own = await get(`/api/showcase/${ming.id}`, ming.cookie);
+    assert.equal(own.body.slots.length, 0);
+  });
+
+  it("空格不影響「只能放已收集的人」的檢查", async () => {
+    const ming = await joinAs("陳小明");
+    const stranger = await joinAs("沒收集過的人");
+
+    const res = await put(
+      "/api/showcase",
+      { subjectIds: [null, stranger.id] },
+      ming.cookie,
+    );
+
+    assert.equal(res.status, 403);
+  });
+
   it("不提供「我被幾個人放入九宮格」的反向查詢", async () => {
     const ming = await joinAs("陳小明");
     const [popular] = await collectOthers(ming, 1);

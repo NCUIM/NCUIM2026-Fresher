@@ -10,7 +10,8 @@ import {
 import { firstErrorMessage } from "@/lib/validation";
 
 const putSchema = z.object({
-  subjectIds: z.array(z.string().min(1)),
+  // null 代表該格留空。索引即格子位置，所以空格必須能被表達出來。
+  subjectIds: z.array(z.string().min(1).nullable()),
 });
 
 const MESSAGE: Record<ShowcaseError, string> = {

@@ -227,13 +227,13 @@ export function AchievementEditor({ eventId }: { eventId: string }) {
               <div className="mt-2 flex gap-2">
                 <button
                   onClick={() => startEdit(a)}
-                  className="rounded-lg border border-line px-3 py-1.5 text-xs transition-colors hover:border-neon/50"
+                  className="tap-target rounded-lg border border-line px-3 py-1.5 text-xs transition-colors hover:border-neon hover:bg-neon/10 hover:text-neon"
                 >
                   編輯
                 </button>
                 <button
                   onClick={() => remove(a)}
-                  className="rounded-lg border border-flare/60 px-3 py-1.5 text-xs text-flare transition-colors hover:bg-flare/10"
+                  className="tap-target rounded-lg border border-flare/60 px-3 py-1.5 text-xs text-flare transition-colors hover:bg-flare/20"
                 >
                   刪除
                 </button>

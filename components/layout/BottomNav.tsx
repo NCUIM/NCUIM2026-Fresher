@@ -20,9 +20,12 @@ type NavItem = {
  * 一個要出示、一個要掃描，兩者都必須一鍵可達，而且要在拇指最容易
  * 碰到的位置。
  *
- * 「待寫」取代了原本的成就位置——寫短評是基礎分入帳的必要條件，
+ * 「寫短評」取代了原本的成就位置——寫短評是基礎分入帳的必要條件，
  * 但它先前只有 /me 上的一張提示卡可以進入，很多人整場都不會發現。
  * 成就與排行榜移到 /me 的次要入口。
+ *
+ * 最後兩項是同一個機制的兩面：「寫短評」是我寫給別人的（所以有待辦徽章），
+ * 「漂浮牆」是別人寫給我的。
  */
 export function BottomNav({
   pendingImpressions = 0,
@@ -34,13 +37,13 @@ export function BottomNav({
   const pathname = usePathname();
 
   const items: NavItem[] = [
-    // 公告的未讀掛在「我的」上——公告的入口在 /me，
+    // 公告的未讀掛在「個人頁面」上——公告的入口在 /me，
     // 而集合時間變更這種資訊必須在任何頁面都看得到。
-    { href: "/me", label: "我的", icon: "◈", badge: unreadAnnouncements },
-    { href: "/code", label: "我的碼", icon: "▣" },
+    { href: "/me", label: "個人頁面", icon: "◈", badge: unreadAnnouncements },
+    { href: "/code", label: "QRCode", icon: "▣" },
     { href: "/scan", label: "掃描", icon: "◎", primary: true },
-    { href: "/write", label: "待寫", icon: "✎", badge: pendingImpressions },
-    { href: "/wall", label: "牆", icon: "✉" },
+    { href: "/write", label: "寫短評", icon: "✎", badge: pendingImpressions },
+    { href: "/wall", label: "漂浮牆", icon: "✉" },
   ];
 
   return (

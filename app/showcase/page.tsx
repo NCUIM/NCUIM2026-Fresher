@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { getShowcase } from "@/lib/showcase";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 import { ShowcaseEditor } from "@/components/forms/ShowcaseEditor";
 
 export default async function ShowcasePage() {

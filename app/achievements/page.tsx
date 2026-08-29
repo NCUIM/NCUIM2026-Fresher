@@ -6,7 +6,7 @@ import {
   type AchievementStatus,
 } from "@/lib/achievements";
 import { computeScore } from "@/lib/score";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 
 export default async function AchievementsPage() {
   const me = await getCurrentParticipant();

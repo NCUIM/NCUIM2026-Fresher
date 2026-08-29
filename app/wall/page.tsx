@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { getReceivedImpressions } from "@/lib/wall";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 import { FloatingWall } from "@/components/wall/FloatingWall";
 
 export default async function WallPage() {

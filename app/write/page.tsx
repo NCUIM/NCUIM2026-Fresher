@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { pendingImpressions } from "@/lib/score";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 import { WriteQueue } from "@/components/forms/WriteQueue";
 
 export default async function WritePage() {

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { getLeaderboard } from "@/lib/leaderboard";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 import { LeaderboardLive } from "@/components/leaderboard/LeaderboardLive";
 
 export default async function LeaderboardPage() {

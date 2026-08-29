@@ -8,7 +8,7 @@ import { computeScore, pendingImpressions } from "@/lib/score";
 import { listAnnouncements } from "@/lib/announcements";
 import { getShowcase } from "@/lib/showcase";
 import { SHOWCASE_SIZE } from "@/lib/validation";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 
 /**
  * 個人主頁：身分、分數、九宮格、收集到的卡片。
@@ -95,16 +95,56 @@ export default async function MePage() {
         </Link>
       </header>
 
-      {/* 分數 */}
-      <Link
-        href="/achievements"
-        className="glow-neon flex flex-col items-center gap-0.5 rounded-xl border border-neon/50 surface py-4"
-      >
-        <span className="px text-[10px] tracking-[0.2em] text-faint">SCORE</span>
-        <span className="px text-glow-neon text-4xl leading-none text-neon">
-          {score.total}
-        </span>
-      </Link>
+      {/*
+        首次進入的引導。用「還沒收集到任何人」當判斷條件，
+        不需要另外記錄是否為第一次——沒有收集紀錄本身就是第一次的狀態，
+        而且如果有人一直沒開始，這段提示會一直留著。
+      */}
+      {collections.length === 0 ? (
+        <section className="flex flex-col gap-3 rounded-xl border border-neon/50 surface p-5">
+          <h2 className="font-bold text-neon">接下來怎麼玩</h2>
+          <ol className="flex flex-col gap-2.5 text-sm text-dim">
+            <li className="flex gap-3">
+              <span className="px shrink-0 text-neon">01</span>
+              <span>
+                找到一個人，其中一個出示<strong className="text-chalk">我的碼</strong>、
+                另一個用<strong className="text-chalk">掃描</strong>——一次就雙方互相收集。
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="px shrink-0 text-neon">02</span>
+              <span>
+                趁還記得，<strong className="text-chalk">寫下對他的印象</strong>。
+                寫完分數才會入帳。
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="px shrink-0 text-neon">03</span>
+              <span>
+                收集愈多解愈多成就。別人寫給你的話會出現在
+                <strong className="text-chalk">牆</strong>上，只有你看得到。
+              </span>
+            </li>
+          </ol>
+          <Link
+            href="/scan"
+            className="tap-target glow-neon flex items-center justify-center rounded-sm bg-neon py-3 font-bold text-void"
+          >
+            開始掃描
+          </Link>
+        </section>
+      ) : (
+        /* 分數 */
+        <Link
+          href="/achievements"
+          className="glow-neon flex flex-col items-center gap-0.5 rounded-xl border border-neon/50 surface py-4"
+        >
+          <span className="px text-[10px] tracking-[0.2em] text-faint">SCORE</span>
+          <span className="px text-glow-neon text-4xl leading-none text-neon">
+            {score.total}
+          </span>
+        </Link>
+      )}
 
       {/* 待撰寫提示 */}
       {pending.length > 0 && (
@@ -220,7 +260,13 @@ export default async function MePage() {
       </section>
 
       {/* 次要入口 */}
-      <div className="grid grid-cols-2 gap-2 pt-1">
+      <div className="grid grid-cols-3 gap-2 pt-1">
+        <Link
+          href="/achievements"
+          className="tap-target flex items-center justify-center rounded-lg border border-line py-3 text-sm"
+        >
+          成就
+        </Link>
         <Link
           href="/leaderboard"
           className="tap-target flex items-center justify-center rounded-lg border border-line py-3 text-sm"

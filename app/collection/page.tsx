@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentParticipant } from "@/lib/session";
 import { toCardView } from "@/lib/cards";
 import { CardDisplay } from "@/components/card/CardDisplay";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 
 export default async function CollectionPage(props: PageProps<"/collection">) {
   const me = await getCurrentParticipant();

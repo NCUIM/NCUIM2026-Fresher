@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentParticipant } from "@/lib/session";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 import { Scanner } from "@/components/scan/Scanner";
 
 /**

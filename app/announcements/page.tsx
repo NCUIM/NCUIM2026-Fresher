@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
 import { listAnnouncements, markAllRead } from "@/lib/announcements";
-import { NavShell } from "@/components/layout/BottomNav";
+import { NavShell } from "@/components/layout/NavShell";
 
 export default async function AnnouncementsPage() {
   const me = await getCurrentParticipant();

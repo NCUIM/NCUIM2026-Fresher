@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { getCurrentAdmin, requireEventAccess } from "@/lib/admin-session";
+import { getPublicOrigin } from "@/lib/origin";
 
 /**
  * 可投影或列印的報到 QR Code。
@@ -11,34 +11,42 @@ import { getCurrentAdmin } from "@/lib/admin-session";
  * 沒有這一頁，主辦方手上只有 JOINNCU1 這樣的字串，無法讓新生掃描——
  * 註冊碼必須被畫成 QR 才進得了活動現場。
  */
-export default async function AdminCodesPage() {
+export default async function AdminCodesPage(
+  props: PageProps<"/admin/events/[id]/codes">,
+) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const event = await prisma.event.findFirst({
-    where: { status: "ACTIVE" },
-    orderBy: { createdAt: "desc" },
+  const { id } = await props.params;
+
+  /*
+    ⚠️ 這是全站最不可逆的一頁：印出去的 QR 收不回來。
+    活動由網址決定，所以列印前網址列本身就能核對是哪一場——
+    先前靠「我選定的那一場」，切換過卻忘記就會印錯。
+  */
+  const allowed = await requireEventAccess(admin, id);
+  if (!allowed) notFound();
+
+  const event = await prisma.event.findUnique({
+    where: { id: allowed.id },
     include: { entryCodes: { orderBy: { role: "asc" } } },
   });
+  if (!event) notFound();
 
-  if (!event) {
-    return (
-      <main className="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center gap-2 px-5 text-center">
-        <h1 className="text-lg font-bold">沒有進行中的活動</h1>
-        <Link href="/admin" className="text-sm text-dim underline">
-          回到後台
-        </Link>
-      </main>
-    );
-  }
+  /*
+    與 /admin/display 走同一套來源判斷。先前這裡自己讀標頭，於是
+    PUBLIC_ORIGIN 對投影頁有效、對這一頁無效——而這一頁印出來的東西
+    是要帶到現場、當天無法更正的，兩者不一致的代價最高。
 
-  const headerList = await headers();
-  const host = headerList.get("host") ?? "localhost:3000";
-  const proto = headerList.get("x-forwarded-proto") ?? "http";
+    另外舊寫法的 proto 預設是 http，在沒有 x-forwarded-proto 的
+    https 網域下會印出 http 開頭的網址。
+  */
+  const origin = await getPublicOrigin();
+  const host = origin.replace(/^https?:\/\//, "");
 
   const codes = await Promise.all(
     event.entryCodes.map(async (entry) => {
-      const url = `${proto}://${host}/join/${entry.code}`;
+      const url = `${origin}/join/${entry.code}`;
       return {
         ...entry,
         url,
@@ -57,9 +65,10 @@ export default async function AdminCodesPage() {
       <div className="rounded-xl bg-moon/10 px-4 py-3 text-sm text-moon">
         <p className="font-medium">投影或列印前請確認網址</p>
         <p className="mt-1 text-moon/80">
-          QR 內容取自目前的連線網址（<span className="font-mono">{host}</span>）。
-          若你現在是透過隧道或本機位址存取，印出來的碼在活動當天會連不到。
-          請在<strong>正式網址</strong>底下開啟這一頁再列印。
+          QR 會指向 <span className="font-mono">{host}</span>。
+          若這不是活動當天要用的網址，印出來的碼到時候會連不到。
+          設定 <span className="font-mono">PUBLIC_ORIGIN</span> 可以固定它；
+          沒設定時取自你目前的連線網址。
         </p>
       </div>
 
@@ -97,7 +106,7 @@ export default async function AdminCodesPage() {
       </p>
 
       <Link
-        href="/admin"
+        href={`/admin/events/${event.id}`}
         className="tap-target flex items-center justify-center text-sm text-dim"
       >
         回到後台

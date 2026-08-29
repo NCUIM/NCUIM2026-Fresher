@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AchievementType, Role } from "@prisma/client";
 import { isValidIconKey, REQUIRED_ICON_COUNT } from "./icons";
 import { isValidZodiacKey, UNIVERSITY_MAX } from "./zodiac";
 
@@ -77,6 +78,53 @@ export const profileSchema = z.object({
 });
 
 export const recoveryRequestSchema = z.object({ email });
+
+/*
+  成就類型的字面值。刻意不從 @prisma/client 匯入 enum 取值——
+  那是執行期的值，會把整個資料庫驅動帶進瀏覽器套件（SHOWCASE_SIZE 踩過）。
+  satisfies 讓型別層仍與 Prisma 的 enum 對齊：那邊增修而這裡沒跟上，編譯就會失敗。
+*/
+export const ACHIEVEMENT_TYPES = [
+  "SCAN_COUNT",
+  "COLLECTED_COUNT",
+  "EARLY_SCAN",
+  "SCAN_ROLE",
+  "TEAM_COLLECT",
+] as const satisfies readonly AchievementType[];
+
+export const ACHIEVEMENT_ROLES = [
+  "PARTICIPANT",
+  "STAFF",
+] as const satisfies readonly Role[];
+
+/** TEAM_COLLECT 用 -1 表示「全部隊員」，以達成當下的隊伍人數認定。 */
+export const TEAM_COLLECT_ALL = -1;
+
+export const achievementSchema = z
+  .object({
+    key: z
+      .string()
+      .trim()
+      .min(1, "請輸入代號")
+      .max(40)
+      .regex(/^[a-z0-9-]+$/, "代號只能用小寫英文、數字與連字號"),
+    type: z.enum(ACHIEVEMENT_TYPES),
+    threshold: z.number().int("門檻必須是整數"),
+    points: z.number().int().min(0, "分數不能為負"),
+    hidden: z.boolean(),
+    title: z.string().trim().min(1, "請輸入名稱").max(30),
+    description: z.string().trim().max(60).optional().nullable(),
+    targetRole: z.enum(ACHIEVEMENT_ROLES).optional().nullable(),
+  })
+  .refine(
+    (v) => v.type !== "SCAN_ROLE" || Boolean(v.targetRole),
+    { message: "掃描特定身分的成就必須指定對象身分", path: ["targetRole"] },
+  )
+  .refine(
+    // -1 只對 TEAM_COLLECT 有意義；其他類型的 0 或負數是永遠達成或永遠達不成。
+    (v) => v.threshold >= 1 || (v.type === "TEAM_COLLECT" && v.threshold === TEAM_COLLECT_ALL),
+    { message: "門檻至少要是 1（集齊全隊可填 -1）", path: ["threshold"] },
+  );
 
 export const joinSchema = profileSchema.extend({
   entryCode: z.string().trim().min(1),

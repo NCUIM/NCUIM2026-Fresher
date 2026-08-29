@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { getCurrentAdmin, requireEventAccess } from "@/lib/admin-session";
 import { getPublicOrigin } from "@/lib/origin";
 
 /**
@@ -16,29 +16,25 @@ import { getPublicOrigin } from "@/lib/origin";
  * 投影幕只有在場的人看得到，而那正是我們要放進來的對象；
  * 印出來張貼的海報則會被不在場的人拍走。
  */
-export default async function DisplayPage() {
+export default async function DisplayPage(
+  props: PageProps<"/admin/events/[id]/display">,
+) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const event = await prisma.event.findFirst({
-    where: { status: "ACTIVE" },
-    orderBy: { createdAt: "desc" },
+  const { id } = await props.params;
+
+  const allowed = await requireEventAccess(admin, id);
+  if (!allowed) notFound();
+
+  const event = await prisma.event.findUnique({
+    where: { id: allowed.id },
     include: {
       entryCodes: { where: { role: "PARTICIPANT" }, take: 1 },
       _count: { select: { participants: true } },
     },
   });
-
-  if (!event) {
-    return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="text-2xl font-black">目前沒有進行中的活動</h1>
-        <Link href="/admin" className="text-sm text-neon underline">
-          回到後台
-        </Link>
-      </main>
-    );
-  }
+  if (!event) notFound();
 
   const entry = event.entryCodes[0];
   if (!entry) {
@@ -46,7 +42,7 @@ export default async function DisplayPage() {
       <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
         <h1 className="text-2xl font-black">這場活動沒有一般參與者的報到碼</h1>
         <p className="text-sm text-dim">請先於後台建立。</p>
-        <Link href="/admin" className="text-sm text-neon underline">
+        <Link href={`/admin/events/${event.id}`} className="text-sm text-neon underline">
           回到後台
         </Link>
       </main>
@@ -100,7 +96,7 @@ export default async function DisplayPage() {
           已報到 {event._count.participants} 人
         </p>
         <p className="text-xs break-all text-faint/70">{joinUrl}</p>
-        <Link href="/admin" className="mt-2 text-xs text-faint underline">
+        <Link href={`/admin/events/${event.id}`} className="mt-2 text-xs text-faint underline">
           回到後台
         </Link>
       </footer>

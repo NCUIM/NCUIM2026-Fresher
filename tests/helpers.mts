@@ -60,6 +60,103 @@ export async function readToken(
   return row?.token ?? null;
 }
 
+/**
+ * 直接讀出某人的 sessionToken，用途只有一個：斷言它**沒有**從 API 洩漏。
+ *
+ * 比對值而不只是比對欄位名，這樣就算日後有人把它改名成 token 或 secret
+ * 端出來，測試仍然攔得住。
+ */
+export async function readSessionToken(
+  participantId: string,
+): Promise<string | null> {
+  const p = await prisma.participant.findUnique({
+    where: { id: participantId },
+    select: { sessionToken: true },
+  });
+  return p?.sessionToken ?? null;
+}
+
+/** 以帳密登入後台，回傳可用於後續請求的 cookie。 */
+export async function loginAs(
+  username: string,
+  password: string,
+): Promise<string> {
+  const res = await fetch(`${BASE}/api/admin/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (res.status !== 200) {
+    throw new Error(`登入 ${username} 失敗：${res.status}`);
+  }
+  return (res.headers.get("set-cookie") ?? "").split(";")[0];
+}
+
+/**
+ * 建立一個未指派任何活動的主持人帳號。
+ *
+ * 直接寫資料庫而非走 API：這是測試的前置條件，不是待驗證的行為。
+ */
+export async function createHostAdmin(
+  username: string,
+  password: string,
+): Promise<string> {
+  const { hashPassword } = await import("../lib/password.ts");
+  const admin = await prisma.admin.create({
+    data: { username, passwordHash: await hashPassword(password), role: "HOST" },
+  });
+  return admin.id;
+}
+
+/** 把主持人指派給某一場活動。這是前置條件，不走 API。 */
+export async function assignHost(
+  adminId: string,
+  eventId: string,
+): Promise<void> {
+  await prisma.adminEvent.upsert({
+    where: { adminId_eventId: { adminId, eventId } },
+    create: { adminId, eventId },
+    update: {},
+  });
+}
+
+/** 清掉測試建立的帳號與活動，避免累積影響後續測試。 */
+export async function removeTestAdmins(): Promise<void> {
+  await prisma.admin.deleteMany({ where: { username: { startsWith: "test-" } } });
+  await prisma.event.deleteMany({ where: { name: { startsWith: "測試用活動" } } });
+}
+
+/**
+ * 取得（必要時建立）第二場活動的 id，用於驗證跨活動隔離。
+ *
+ * 隔離問題在只有一場的時候看不出來——所有人都落在同一場上，
+ * 少了權限檢查也不會有任何測試失敗。
+ */
+export async function secondEventId(superCookie: string): Promise<string> {
+  const res = await fetch(`${BASE}/api/admin/events`, {
+    headers: { cookie: superCookie },
+  });
+  const { events } = await res.json();
+  const existing = events.find((e: { name: string }) =>
+    e.name.startsWith("測試用活動"),
+  );
+  if (existing) return existing.id;
+
+  const created = await fetch(`${BASE}/api/admin/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", cookie: superCookie },
+    body: JSON.stringify({
+      name: "測試用活動（隔離）",
+      passcode: "isolated",
+      startsAt: new Date().toISOString(),
+      teamCount: 0,
+      basePoints: 10,
+      leaderboardTopN: 10,
+    }),
+  });
+  return (await created.json()).id;
+}
+
 /** 調整排行榜公開名次數，用於驗證「只回傳前 N 名」。 */
 export async function setLeaderboardTopN(n: number): Promise<void> {
   await prisma.event.updateMany({ data: { leaderboardTopN: n } });

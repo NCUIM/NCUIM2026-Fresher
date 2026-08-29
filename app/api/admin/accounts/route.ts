@@ -13,7 +13,17 @@ const createSchema = z.object({
     .max(32)
     .regex(/^[A-Za-z0-9._-]+$/, "帳號只能使用英數字與 . _ -"),
   password: z.string().min(8, "密碼至少 8 個字元").max(128),
+  role: z.enum(["SUPER", "HOST"]).default("HOST"),
+  /** 建立主持人時可一併指派活動，省去再跑一趟指派流程。 */
+  eventIds: z.array(z.string()).optional(),
 });
+
+/**
+ * 帳號管理僅限總管理員。
+ *
+ * 主持人若能新增帳號，就能造一個 SUPER 給自己，權限分級等於不存在。
+ */
+const SUPER_ONLY = { error: "只有總管理員可以管理帳號" };
 
 /** 列出所有管理員。不回傳任何雜湊——畫面上沒有需要，回傳只會多一個外洩點。 */
 export async function GET() {
@@ -21,14 +31,21 @@ export async function GET() {
   if (!admin) {
     return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
   }
+  if (admin.role !== "SUPER") {
+    return NextResponse.json(SUPER_ONLY, { status: 403 });
+  }
 
   const admins = await prisma.admin.findMany({
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
       username: true,
+      role: true,
       createdAt: true,
       _count: { select: { sessions: true } },
+      assignments: {
+        select: { event: { select: { id: true, name: true, status: true } } },
+      },
     },
   });
 
@@ -45,6 +62,9 @@ export async function POST(req: Request) {
   const admin = await getCurrentAdmin();
   if (!admin) {
     return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
+  }
+  if (admin.role !== "SUPER") {
+    return NextResponse.json(SUPER_ONLY, { status: 403 });
   }
 
   let raw: unknown;
@@ -73,8 +93,17 @@ export async function POST(req: Request) {
     data: {
       username: parsed.data.username,
       passwordHash: await hashPassword(parsed.data.password),
+      role: parsed.data.role,
+      // SUPER 的權限來自 role，不需要指派；只有 HOST 靠指派決定管得到哪一場。
+      ...(parsed.data.role === "HOST" && parsed.data.eventIds?.length
+        ? {
+            assignments: {
+              create: parsed.data.eventIds.map((eventId) => ({ eventId })),
+            },
+          }
+        : {}),
     },
-    select: { id: true, username: true, createdAt: true },
+    select: { id: true, username: true, role: true, createdAt: true },
   });
 
   return NextResponse.json(created, { status: 201 });

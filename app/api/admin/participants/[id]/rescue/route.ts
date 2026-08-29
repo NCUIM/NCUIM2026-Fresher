@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPublicOrigin } from "@/lib/origin";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { canAccessEvent, getCurrentAdmin } from "@/lib/admin-session";
 import { generateSessionToken } from "@/lib/codes";
 
 /**
@@ -21,7 +21,12 @@ export async function POST(
 
   const { id } = await ctx.params;
   const participant = await prisma.participant.findUnique({ where: { id } });
-  if (!participant) {
+  /*
+    無權操作與不存在回同一個 404。
+    這個端點會換發身分憑證，是全站權限最重的一支——別場的主持人若能呼叫它，
+    等於能取得任何人的身分。
+  */
+  if (!participant || !(await canAccessEvent(admin, participant.eventId))) {
     return NextResponse.json({ error: "找不到這位參與者" }, { status: 404 });
   }
 

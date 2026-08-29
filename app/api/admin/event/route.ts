@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import {
+  getCurrentAdmin,
+  requireEventAccess,
+  resolveAdminEvent,
+} from "@/lib/admin-session";
 import { firstErrorMessage } from "@/lib/validation";
 
 const settingsSchema = z.object({
@@ -19,23 +23,22 @@ export async function GET() {
     return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
   }
 
-  const event = await prisma.event.findFirst({
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      name: true,
-      passcode: true,
-      basePoints: true,
-      leaderboardTopN: true,
-      teamCount: true,
-      status: true,
-    },
-  });
-
+  const event = await resolveAdminEvent(admin);
   if (!event) {
     return NextResponse.json({ error: "找不到活動" }, { status: 404 });
   }
-  return NextResponse.json(event);
+
+  // 明確挑欄位，不整包回傳——Event 上有 archivedAt、purgeAfter 等
+  // 這個端點不需要的東西，順手端出去只會擴大暴露面。
+  return NextResponse.json({
+    id: event.id,
+    name: event.name,
+    passcode: event.passcode,
+    basePoints: event.basePoints,
+    leaderboardTopN: event.leaderboardTopN,
+    teamCount: event.teamCount,
+    status: event.status,
+  });
 }
 
 /**
@@ -69,10 +72,14 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const event = await prisma.event.findFirst({
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    select: { id: true },
-  });
+  // 通關碼與基礎分是整場活動的設定，改錯場的後果立即而全面。
+  const requested =
+    typeof (raw as { eventId?: unknown })?.eventId === "string"
+      ? (raw as { eventId: string }).eventId
+      : null;
+  const event = requested
+    ? await requireEventAccess(admin, requested)
+    : await resolveAdminEvent(admin);
   if (!event) {
     return NextResponse.json({ error: "找不到活動" }, { status: 404 });
   }

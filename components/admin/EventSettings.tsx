@@ -12,9 +12,11 @@ const field =
   "rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint";
 
 export function EventSettings({
+  eventId,
   initial,
   participantCount,
 }: {
+  eventId: string;
   initial: Settings;
   participantCount: number;
 }) {
@@ -36,6 +38,7 @@ export function EventSettings({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          eventId,
           passcode,
           basePoints: Number(basePoints),
           leaderboardTopN: Number(topN),

@@ -92,3 +92,94 @@ describe("封存", () => {
     assert.equal(res.status, 401);
   });
 });
+
+/** DELETE 沒有對應的 post() helper，這裡直接發。 */
+async function reopen(cookie?: string) {
+  const res = await fetch(`${BASE}/api/admin/archive`, {
+    method: "DELETE",
+    headers: cookie ? { cookie } : {},
+  });
+  return { status: res.status, body: await res.json().catch(() => null) };
+}
+
+describe("解除封存", () => {
+  before(requireServer);
+  beforeEach(async () => {
+    await resetParticipants();
+    await reactivateEvents();
+  });
+  after(async () => {
+    await reactivateEvents();
+    await disconnect();
+  });
+
+  it("重新開放後可以再次報到", async () => {
+    const adminCookie = await loginAsAdmin();
+    await post("/api/admin/archive", {}, adminCookie);
+
+    await reopen(adminCookie);
+
+    const res = await post("/api/join", {
+      entryCode: "JOINNCU1",
+      passcode: "1234",
+      nickname: "重開之後才來的",
+      realName: "重開之後才來的",
+      icons: ["music", "game", "food"],
+      bio: "趕上了",
+    });
+    assert.equal(res.status, 201, "誤按封存不該讓整場活動就此結束");
+  });
+
+  it("重新開放後可以再次收集", async () => {
+    const adminCookie = await loginAsAdmin();
+    const ming = await joinAs("陳小明");
+    const hua = await joinAs("林小華");
+    await post("/api/admin/archive", {}, adminCookie);
+
+    await reopen(adminCookie);
+
+    const res = await scan(ming, hua);
+    assert.equal(res.status, 201);
+  });
+
+  it("保留期限一併取消", async () => {
+    const adminCookie = await loginAsAdmin();
+    await post("/api/admin/archive", {}, adminCookie);
+
+    const res = await reopen(adminCookie);
+
+    assert.equal(res.status, 200);
+    assert.equal(
+      res.body.status,
+      "ACTIVE",
+      "留著舊的 purgeAfter 會讓畫面顯示一個已經不成立的刪除日期",
+    );
+  });
+
+  it("一般參與者不能重新開放活動", async () => {
+    const adminCookie = await loginAsAdmin();
+    const ming = await joinAs("陳小明");
+    await post("/api/admin/archive", {}, adminCookie);
+
+    const res = await reopen(ming.cookie);
+
+    assert.equal(res.status, 401);
+  });
+
+  it("未登入者不能重新開放活動", async () => {
+    const adminCookie = await loginAsAdmin();
+    await post("/api/admin/archive", {}, adminCookie);
+
+    const res = await reopen();
+
+    assert.equal(res.status, 401);
+  });
+
+  it("沒有已封存的活動時回傳 404", async () => {
+    const adminCookie = await loginAsAdmin();
+
+    const res = await reopen(adminCookie);
+
+    assert.equal(res.status, 404);
+  });
+});

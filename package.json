@@ -23,7 +23,8 @@
     "test:setup": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public node scripts/setup-test-db.mts",
     "test": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public TEST_BASE_URL=http://localhost:3001 node --test --test-concurrency=1 tests/**/*.test.mts",
     "smoke": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public SMOKE_BASE_URL=http://localhost:3001 node scripts/smoke.mts",
-    "rehearsal": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public REHEARSAL_BASE_URL=http://localhost:3001 node scripts/rehearsal.mts"
+    "rehearsal": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ncuim_test?schema=public REHEARSAL_BASE_URL=http://localhost:3001 node scripts/rehearsal.mts",
+    "mail:test": "node scripts/test-mail.mts"
   },
   "repository": {
     "type": "git",

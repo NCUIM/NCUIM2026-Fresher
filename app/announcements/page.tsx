@@ -1,18 +1,19 @@
 import { redirect } from "next/navigation";
 import { getCurrentParticipant } from "@/lib/session";
-import { listAnnouncements, markAllRead } from "@/lib/announcements";
+import { listAnnouncements } from "@/lib/announcements";
 import { NavShell } from "@/components/layout/NavShell";
+import { MarkAnnouncementsRead } from "@/components/layout/MarkAnnouncementsRead";
 
 export default async function AnnouncementsPage() {
   const me = await getCurrentParticipant();
   if (!me) redirect("/");
 
-  // 先讀取再標記已讀：這樣本次仍看得到未讀樣式，下次進來才清空。
+  // 本次仍看得到未讀樣式：標記已讀交給下面的客戶端元件，在畫面產生之後才跑。
   const { announcements } = await listAnnouncements(me.eventId, me.id);
-  await markAllRead(me.eventId, me.id);
 
   return (
     <NavShell>
+      <MarkAnnouncementsRead />
       <h1 className="text-xl font-black">活動公告</h1>
 
       {announcements.length === 0 ? (

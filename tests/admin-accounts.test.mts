@@ -132,16 +132,22 @@ describe("管理員帳號", () => {
     assert.equal(res.status, 409, "移除自己會把自己鎖在門外");
   });
 
-  it("不能移除最後一位管理員", async () => {
+  /*
+    守的是「最後一位**總管理員**」，不是「最後一位管理員」。
+
+    只剩主持人的話，沒有人能新增帳號、建立活動或指派主持人——
+    後台等於只剩半套，得回去改資料庫才救得回來。
+  */
+  it("不能移除最後一位總管理員", async () => {
     const { cookie } = await loginAsAdmin();
     await send(
       "/api/admin/accounts",
       "POST",
-      { username: "temp.admin", password: "a-good-password" },
+      { username: "temp.admin", password: "a-good-password", role: "SUPER" },
       cookie,
     );
 
-    // 以新帳號登入後刪掉 admin，剩下自己一個
+    // 以新帳號登入後刪掉 admin，剩下自己一個總管理員
     const second = await loginAsAdmin("temp.admin", "a-good-password");
     const list = await send("/api/admin/accounts", "GET", undefined, second.cookie);
     const original = list.body.admins.find((a: any) => a.username === "admin");
@@ -152,7 +158,6 @@ describe("管理員帳號", () => {
       second.cookie,
     );
 
-    // 現在只剩 temp.admin，他想刪自己也不行
     const selfDelete = await send(
       `/api/admin/accounts/${list.body.currentId}`,
       "DELETE",
@@ -161,13 +166,36 @@ describe("管理員帳號", () => {
     );
     assert.equal(selfDelete.status, 409);
 
-    // 還原：把 admin 加回來
+    // 還原：把 admin 加回來，且必須是總管理員
     await send(
       "/api/admin/accounts",
       "POST",
-      { username: "admin", password: "change-me" },
+      { username: "admin", password: "change-me", role: "SUPER" },
       second.cookie,
     );
+  });
+
+  it("新增帳號時預設是主持人，不是總管理員", async () => {
+    const { cookie } = await loginAsAdmin();
+
+    await send(
+      "/api/admin/accounts",
+      "POST",
+      { username: "temp.default", password: "a-good-password" },
+      cookie,
+    );
+
+    const list = await send("/api/admin/accounts", "GET", undefined, cookie);
+    const created = list.body.admins.find(
+      (a: any) => a.username === "temp.default",
+    );
+    assert.equal(
+      created.role,
+      "HOST",
+      "多給的權限沒有人會發現，少給的立刻會被反應——預設值要往低的那邊放",
+    );
+
+    await send(`/api/admin/accounts/${created.id}`, "DELETE", undefined, cookie);
   });
 
   it("改密碼需要目前的密碼", async () => {

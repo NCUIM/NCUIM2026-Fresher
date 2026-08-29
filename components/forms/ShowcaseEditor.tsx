@@ -7,6 +7,38 @@ import { SHOWCASE_SIZE } from "@/lib/validation";
 
 type Candidate = { id: string; nickname: string; avatarUrl: string | null };
 
+/**
+ * 頭像，沒有就退回暱稱首字。
+ *
+ * 九宮格是拿來回想「這九個人是誰」的，臉比名字快得多——
+ * 而且暱稱在格子裡被截斷後常常認不出來。
+ */
+function Avatar({
+  person,
+  className,
+}: {
+  person: Candidate;
+  className: string;
+}) {
+  if (person.avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={person.avatarUrl}
+        alt=""
+        className={`${className} shrink-0 rounded-full object-cover`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`${className} grid shrink-0 place-items-center rounded-full bg-void text-sm text-faint`}
+    >
+      {person.nickname.slice(0, 1)}
+    </span>
+  );
+}
+
 export function ShowcaseEditor({
   candidates,
   initialSelected,
@@ -60,16 +92,25 @@ export function ShowcaseEditor({
       <div className="grid grid-cols-3 gap-2">
         {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {
           const person = selected[i] ? byId.get(selected[i]) : null;
+          if (!person) {
+            return (
+              <div
+                key={i}
+                className="px grid aspect-square place-items-center rounded-lg border border-dashed border-line p-1 text-center text-xs text-faint"
+              >
+                {String(i + 1).padStart(2, "0")}
+              </div>
+            );
+          }
           return (
             <div
               key={i}
-              className={`grid aspect-square place-items-center rounded-lg p-1 text-center text-xs leading-tight ${
-                person
-                  ? "border border-neon bg-slate text-neon"
-                  : "px border border-dashed border-line text-faint"
-              }`}
+              className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-lg border border-neon bg-slate p-1"
             >
-              {person ? person.nickname : String(i + 1).padStart(2, "0")}
+              <Avatar person={person} className="size-11" />
+              <span className="w-full truncate px-1 text-center text-[11px] leading-tight text-neon">
+                {person.nickname}
+              </span>
             </div>
           );
         })}
@@ -106,6 +147,7 @@ export function ShowcaseEditor({
                           : "border-line text-chalk"
                     }`}
                   >
+                    <Avatar person={c} className="size-8" />
                     <span className="flex-1 truncate">{c.nickname}</span>
                     <span className="px text-sm">{picked ? "✓" : "＋"}</span>
                   </button>

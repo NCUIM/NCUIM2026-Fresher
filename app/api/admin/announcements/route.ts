@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import {
+  canAccessEvent,
+  getCurrentAdmin,
+  resolveAdminEvent,
+} from "@/lib/admin-session";
 import { firstErrorMessage } from "@/lib/validation";
 
 const announcementSchema = z.object({
@@ -31,15 +35,18 @@ export async function POST(req: Request) {
     );
   }
 
-  // 未指定 eventId 時發布到目前進行中的活動。第一階段同時只會有一場。
+  /*
+    未指定 eventId 時發布到自己正在操作的那一場。
+
+    有指定時**必須驗證歸屬**：eventId 來自請求主體，是呼叫端說了算的東西。
+    沒有這道檢查，任何主持人都能對別人的場次發公告，而公告會直接推到
+    那場所有參與者的畫面上。
+  */
   const event = parsed.data.eventId
     ? await prisma.event.findUnique({ where: { id: parsed.data.eventId } })
-    : await prisma.event.findFirst({
-        where: { status: "ACTIVE" },
-        orderBy: { createdAt: "desc" },
-      });
+    : await resolveAdminEvent(admin);
 
-  if (!event) {
+  if (!event || !(await canAccessEvent(admin, event.id))) {
     return NextResponse.json({ error: "找不到進行中的活動" }, { status: 404 });
   }
 

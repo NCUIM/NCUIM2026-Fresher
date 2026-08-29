@@ -24,8 +24,13 @@ export default function AdminLoginPage() {
         setError("帳號或密碼不正確");
         return;
       }
-      router.push("/admin");
-      router.refresh();
+      const data = await res.json().catch(() => null);
+      /*
+        登入是身分 cookie 從無到有的那一刻，而 App Router 的 Client Cache
+        可能還持有「未登入」時的版本。用完整頁面導向，不要 router.push——
+        報到流程曾經因為這件事讓人連續送出三次。
+      */
+      window.location.assign(data?.redirectTo ?? "/admin");
     } catch {
       setError("連線失敗");
     } finally {

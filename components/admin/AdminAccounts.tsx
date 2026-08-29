@@ -6,9 +6,13 @@ import { useState } from "react";
 type Account = {
   id: string;
   username: string;
+  role: string;
   createdAt: string;
   _count: { sessions: number };
+  assignments?: { event: { id: string; name: string } }[];
 };
+
+type EventOption = { id: string; name: string; status: string };
 
 const field =
   "rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint";
@@ -17,18 +21,35 @@ export function AdminAccounts({
   initial,
   currentId,
   usingDefaultPassword,
+  eventOptions,
 }: {
   initial: Account[];
   currentId: string;
   usingDefaultPassword: boolean;
+  eventOptions: EventOption[];
 }) {
   const router = useRouter();
-  const [accounts, setAccounts] = useState(initial);
+  /*
+    直接用 props，不另外放進 state。
+    useState(initial) 只在第一次渲染取值，router.refresh() 之後不會更新——
+    新增帳號的指派關係就永遠不會出現在清單上。
+  */
+  const accounts = initial;
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newUsername, setNewUsername] = useState("");
+  /*
+    預設是主持人，不是總管理員。
+    多給的權限沒有人會發現，少給的立刻就會被反應——所以預設值要往低的那邊放。
+  */
+  const [newRole, setNewRole] = useState<"SUPER" | "HOST">("HOST");
   const [newUserPassword, setNewUserPassword] = useState("");
+  /*
+    建立時就一併指派。分成兩步的話，中間那個「已建立但沒有任何活動」的狀態
+    是會被忘記的——而那個帳號登入後看不到任何東西，對方只會回報「壞掉了」。
+  */
+  const [newEventIds, setNewEventIds] = useState<string[]>([]);
 
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +93,9 @@ export function AdminAccounts({
         body: JSON.stringify({
           username: newUsername,
           password: newUserPassword,
+          role: newRole,
+          // 總管理員的權限來自 role，不需要指派。
+          eventIds: newRole === "HOST" ? newEventIds : [],
         }),
       });
       const data = await res.json();
@@ -79,10 +103,16 @@ export function AdminAccounts({
         setError(data.error ?? "新增失敗");
         return;
       }
-      setAccounts((list) => [...list, { ...data, _count: { sessions: 0 } }]);
-      setNotice(`已新增管理員 ${data.username}`);
+      setNotice(
+        newRole === "HOST" && newEventIds.length > 0
+          ? `已新增主持人 ${data.username}，並指派 ${newEventIds.length} 場活動`
+          : `已新增管理員 ${data.username}`,
+      );
       setNewUsername("");
       setNewUserPassword("");
+      setNewEventIds([]);
+      // 重新取伺服器資料，指派關係才會一起顯示出來。
+      router.refresh();
     } catch {
       setError("連線失敗，請確認網路");
     } finally {
@@ -101,8 +131,8 @@ export function AdminAccounts({
       setError(data.error ?? "移除失敗");
       return;
     }
-    setAccounts((list) => list.filter((x) => x.id !== a.id));
     setNotice(`已移除 ${data.username}`);
+    router.refresh();
   }
 
   async function logout() {
@@ -130,12 +160,29 @@ export function AdminAccounts({
             className="flex items-center gap-3 rounded-lg border border-line surface px-4 py-3"
           >
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="px font-medium">
-                {a.username}
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="px font-medium">{a.username}</span>
+                {a.role === "SUPER" ? (
+                  <span className="rounded-full bg-neon px-2 py-0.5 text-[10px] text-void">
+                    總管理員
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-line px-2 py-0.5 text-[10px] text-dim">
+                    活動主持人
+                  </span>
+                )}
                 {a.id === currentId && (
-                  <span className="ml-2 text-xs text-neon">（你）</span>
+                  <span className="text-xs text-neon">（你）</span>
                 )}
               </span>
+              {/* 主持人管得到哪幾場，是這份清單最需要一眼看出的資訊 */}
+              {a.role === "HOST" && (
+                <span className="text-xs text-dim">
+                  {a.assignments && a.assignments.length > 0
+                    ? a.assignments.map((x) => x.event.name).join("、")
+                    : "未指派任何活動——他登入後看不到東西"}
+                </span>
+              )}
               <span className="text-xs text-faint">
                 {a._count.sessions > 0
                   ? `${a._count.sessions} 個裝置已登入`
@@ -207,6 +254,80 @@ export function AdminAccounts({
           autoComplete="new-password"
           className={field}
         />
+        <select
+          value={newRole}
+          onChange={(e) => setNewRole(e.target.value as "SUPER" | "HOST")}
+          className={field}
+        >
+          <option value="HOST">活動主持人（只能管被指派的那一場）</option>
+          <option value="SUPER">總管理員（可管所有活動與帳號）</option>
+        </select>
+
+        {/*
+          選了總管理員時這一區維持在畫面上，只是鎖住。
+
+          整塊隱藏的話版面會跳動，而且看的人不會知道「指派」這個概念存在；
+          留著並說明為什麼不能填，比讓它消失更清楚。
+        */}
+        <fieldset
+          disabled={newRole === "SUPER"}
+          className={`flex flex-col gap-1.5 rounded-sm border px-3 py-2.5 ${
+            newRole === "SUPER"
+              ? "border-line/50 opacity-50"
+              : "border-line"
+          }`}
+        >
+          <legend className="px-1 text-xs text-dim">指派活動</legend>
+
+          {eventOptions.length === 0 ? (
+            <span className="text-xs text-moon">
+              目前還沒有任何活動，請先建立活動。
+            </span>
+          ) : (
+            eventOptions.map((e) => (
+              <label
+                key={e.id}
+                className={`flex items-center gap-2 text-sm ${
+                  newRole === "SUPER" ? "" : "cursor-pointer"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={newRole === "HOST" && newEventIds.includes(e.id)}
+                  onChange={(ev) =>
+                    setNewEventIds((cur) =>
+                      ev.target.checked
+                        ? [...cur, e.id]
+                        : cur.filter((x) => x !== e.id),
+                    )
+                  }
+                  className="size-4"
+                />
+                <span className="flex-1 truncate">{e.name}</span>
+                {e.status === "ARCHIVED" && (
+                  <span className="text-[10px] text-faint">已封存</span>
+                )}
+              </label>
+            ))
+          )}
+        </fieldset>
+
+        {newRole === "SUPER" ? (
+          <span className="-mt-1 text-xs text-faint">
+            總管理員本來就能操作所有活動，不需要也不能指派。
+          </span>
+        ) : (
+          eventOptions.length > 0 &&
+          newEventIds.length === 0 && (
+            /*
+              一場都沒選就是個看不到任何東西的帳號。這不是錯誤——之後可以再指派——
+              但一定要在按下新增之前就講，否則對方登入後只會回報「壞掉了」。
+            */
+            <span className="-mt-1 text-xs text-moon">
+              沒有選任何活動的話，他登入後看不到任何東西。
+            </span>
+          )
+        )}
         <button
           onClick={addAdmin}
           disabled={busy || newUsername.length < 3 || newUserPassword.length < 8}

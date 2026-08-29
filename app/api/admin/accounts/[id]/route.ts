@@ -16,6 +16,12 @@ export async function DELETE(
   if (!admin) {
     return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
   }
+  if (admin.role !== "SUPER") {
+    return NextResponse.json(
+      { error: "只有總管理員可以管理帳號" },
+      { status: 403 },
+    );
+  }
 
   const { id } = await ctx.params;
 
@@ -26,17 +32,24 @@ export async function DELETE(
     );
   }
 
-  const total = await prisma.admin.count();
-  if (total <= 1) {
-    return NextResponse.json(
-      { error: "這是最後一位管理員，移除後就沒有人進得了後台" },
-      { status: 409 },
-    );
-  }
-
   const target = await prisma.admin.findUnique({ where: { id } });
   if (!target) {
     return NextResponse.json({ error: "找不到這個帳號" }, { status: 404 });
+  }
+
+  /*
+    真正不能沒有的是總管理員，不是「任何管理員」。
+    只剩主持人的話，沒有人能新增帳號、建立活動或指派主持人——
+    後台等於只剩半套，得回去改資料庫才救得回來。
+  */
+  if (target.role === "SUPER") {
+    const supers = await prisma.admin.count({ where: { role: "SUPER" } });
+    if (supers <= 1) {
+      return NextResponse.json(
+        { error: "這是最後一位總管理員，移除後就沒有人能管理帳號與活動" },
+        { status: 409 },
+      );
+    }
   }
 
   // AdminSession 為 cascade，刪除帳號會同時登出他所有的裝置。

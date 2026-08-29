@@ -27,5 +27,7 @@ export async function sendVerificationEmail(
     to: participant.email,
     subject: "請確認你的信箱",
     text: verifyEmailBody(participant.nickname, `${origin}/verify/${token}`),
+    // 失敗在畫面上完全無聲，靠 MailLog 讓工作人員在後台看得到。
+    participantId,
   }).catch((e) => console.error("[mailer] 驗證信寄送失敗", e));
 }

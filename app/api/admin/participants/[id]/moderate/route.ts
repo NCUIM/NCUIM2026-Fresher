@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { canAccessEvent, getCurrentAdmin } from "@/lib/admin-session";
 
 const moderateSchema = z.object({
   clearAvatar: z.boolean().optional(),
@@ -40,6 +40,15 @@ export async function POST(
     return NextResponse.json({ error: "輸入內容有誤" }, { status: 400 });
   }
   const { clearAvatar, clearBio, clearSocialUrl, nickname } = parsed.data;
+
+  // 只能處理自己那一場的人。少了這一句，主持人可以清掉別場參與者的資料。
+  const target = await prisma.participant.findUnique({
+    where: { id },
+    select: { eventId: true },
+  });
+  if (!target || !(await canAccessEvent(admin, target.eventId))) {
+    return NextResponse.json({ error: "找不到這位參與者" }, { status: 404 });
+  }
 
   // 清除頭像時連影像本體一起刪掉，否則 /api/avatar/{id} 仍取得到那張圖，
   // 「移除」就只是把它從畫面上藏起來而已。

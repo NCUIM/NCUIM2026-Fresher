@@ -71,10 +71,19 @@ async function main() {
   if (admin) {
     console.log(`管理員 ${username} 已存在，略過建立。`);
   } else {
+    /*
+      種子建立的是總管理員——它是這個系統的第一個帳號，必須能建立活動
+      與其他帳號，否則全新環境會卡在「沒有人有權限新增任何東西」。
+      之後的主持人帳號從後台建立，預設是權限較低的 HOST。
+    */
     await prisma.admin.create({
-      data: { username, passwordHash: await hashPassword(password) },
+      data: {
+        username,
+        passwordHash: await hashPassword(password),
+        role: "SUPER",
+      },
     });
-    console.log(`已建立管理員：${username}`);
+    console.log(`已建立總管理員：${username}`);
   }
 }
 

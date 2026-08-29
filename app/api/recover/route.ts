@@ -36,6 +36,7 @@ export async function POST(req: Request) {
           participant.nickname,
           `${await getPublicOrigin()}/recover/${token}`,
         ),
+        participantId: participant.id,
       });
     } catch (e) {
       // 寄送失敗也不改變回應內容，否則同樣會洩漏信箱是否存在。

@@ -1,7 +1,7 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { getCurrentParticipant } from "@/lib/session";
+import { getPublicOrigin } from "@/lib/origin";
 import { NavShell } from "@/components/layout/NavShell";
 
 /**
@@ -15,14 +15,23 @@ export default async function CodePage() {
   if (!me) redirect("/");
 
   // QR 內容是網址而非純代碼，讓手機原生相機也能完成收集（Q11 的備援路徑）。
-  const headerList = await headers();
-  const host = headerList.get("host") ?? "localhost:3000";
-  const proto = headerList.get("x-forwarded-proto") ?? "http";
-  const collectUrl = `${proto}://${host}/c/${me.personalCode}`;
+  const origin = await getPublicOrigin();
+  const collectUrl = `${origin}/c/${me.personalCode}`;
+
+  /*
+    深色碼、淺色底。**不要反白。**
+
+    這一頁原本用亮碼配深底來融入暗色介面，結果是網頁掃描器完全讀不到——
+    手機原生相機能解反白的 QR，ZXing 不行。實測同一組網址：
+    黑/白 可解、亮/深 NotFoundException、深/淺 可解。
+
+    症狀特別難查，因為相機會正常開啟、持續掃描，只是永遠不觸發——
+    看起來像掃描程式壞了，其實是這張圖本身讀不出來。
+  */
   const qrDataUrl = await QRCode.toDataURL(collectUrl, {
     width: 900,
     margin: 1,
-    color: { dark: "#e9eef9", light: "#060912" },
+    errorCorrectionLevel: "M",
   });
 
   return (
@@ -34,7 +43,8 @@ export default async function CodePage() {
       </header>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-5">
-        <div className="glow-neon rounded-xl border border-neon/50 bg-void p-3">
+        {/* 白底是為了可掃描性，霓虹外框保住暗色介面的一致感。 */}
+        <div className="glow-neon rounded-xl border border-neon/50 bg-white p-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={qrDataUrl}

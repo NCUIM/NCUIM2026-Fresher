@@ -59,6 +59,9 @@ model Event {
   impressions   Impression[]
   achievements  AchievementDef[]
   announcements Announcement[]
+
+  hosts           AdminEvent[]
+  activeForAdmins Admin[]     @relation("AdminActiveEvent")
 }
 
 /// Event 層級的註冊碼。掃描後建立身分並決定 Role。
@@ -130,6 +133,7 @@ model Participant {
   showcasedBy         ShowcaseSlot[]      @relation("ShowcaseSubject")
   achievements        AchievementEarned[]
   announcementReads   AnnouncementRead[]
+  mailLogs            MailLog[]
 
   /// 一個信箱在同一場活動只能報到一次。
   ///
@@ -141,6 +145,38 @@ model Participant {
   @@unique([eventId, email])
   @@index([eventId])
   @@index([teamId])
+}
+
+enum MailStatus {
+  SENT
+  FAILED
+  /// 未設定 SMTP，信根本沒有嘗試寄出。
+  /// 與 FAILED 分開記：這不是寄信出錯，是環境沒設定好，處理方式完全不同。
+  SKIPPED
+}
+
+/// 每一次寄信的結果。
+///
+/// 存在的理由：寄信刻意不阻斷主流程（Q20），SMTP 掛掉時使用者照樣完成報到、
+/// 看到成功畫面，信卻永遠不會到。沒有這張表，這件事要等到活動後第 8 天
+/// 有人說「收不到找回信」才會被發現，而那時已經來不及補救。
+///
+/// 掛在 Participant 上是為了讓 14 天到期的清除能一併帶走它——
+/// 這裡存了收件信箱，屬於個資，不能比本人的資料活得更久。
+model MailLog {
+  id            String     @id @default(cuid())
+  participantId String?
+  to            String
+  subject       String
+  status        MailStatus
+  /// 失敗原因。只存訊息，不存堆疊——堆疊對現場的工作人員沒有意義。
+  error         String?
+  createdAt     DateTime   @default(now())
+
+  participant Participant? @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([status])
 }
 
 /// 寄到信箱的一次性權杖。
@@ -356,13 +392,48 @@ model AnnouncementRead {
 }
 
 /// 帳號預先建立，不開放註冊。不使用共用密碼——需能辨別是哪位 Admin 執行了操作。
-model Admin {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
+/// 管理員的層級。與 Participant 的 Role 完全無關——那是活動內的身分，
+/// 這是後台的權限。
+enum AdminRole {
+  /// 總管理員：看得到所有 Event，可以建立活動、指派主持人、管理管理員帳號。
+  SUPER
+  /// 活動主持人：只能操作被指派的 Event，看不到也碰不到其他場次。
+  HOST
+}
 
-  sessions AdminSession[]
+model Admin {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  role         AdminRole @default(HOST)
+  createdAt    DateTime  @default(now())
+
+  /// 目前正在操作的 Event。
+  ///
+  /// SUPER 用它在多場之間切換；HOST 一般就是自己被指派的那一場。
+  /// 存在這裡而不是 AdminSession 上，是為了讓同一個人在手機與筆電上
+  /// 看到的是同一場——活動當天在兩個裝置間切換卻操作到不同場次，
+  /// 是會發錯公告的那種錯。
+  activeEventId String?
+  activeEvent   Event?  @relation("AdminActiveEvent", fields: [activeEventId], references: [id], onDelete: SetNull)
+
+  sessions    AdminSession[]
+  assignments AdminEvent[]
+}
+
+/// 哪位主持人負責哪一場。多對多：同一個人可能連續幾年都主持迎新。
+///
+/// SUPER 不需要在這裡出現——它的權限來自 role，不是指派。
+model AdminEvent {
+  adminId   String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([adminId, eventId])
+  @@index([eventId])
 }
 
 /// 獨立成表而非存在 Admin 上，讓同一位管理員能同時從多個裝置登入，

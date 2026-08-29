@@ -42,7 +42,15 @@ const email = z
 export const profileSchema = z.object({
   nickname: z.string().trim().min(1, "請輸入暱稱").max(NICKNAME_MAX),
   socialUrl: httpsUrl.optional().nullable(),
-  bio: z.string().trim().max(BIO_MAX).optional().nullable(),
+  /*
+    自我介紹為必填。它是卡片上最能製造話題的一欄——沒有它，
+    一張卡片只剩暱稱和三個圖示，別人看了不知道能聊什麼。
+
+    資料庫欄位仍為可空：既有的 24 筆裡有 6 筆沒有自我介紹，
+    改成 NOT NULL 得先回填才不會讓它們變成不合法的資料。
+    在這裡驗證的效果相同——他們下次編輯個人資料時就必須補上。
+  */
+  bio: z.string().trim().min(1, "請寫一句自我介紹").max(BIO_MAX),
   icons: z
     .array(z.string())
     .length(REQUIRED_ICON_COUNT, `請選擇 ${REQUIRED_ICON_COUNT} 個圖示`)

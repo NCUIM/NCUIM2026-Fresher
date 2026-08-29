@@ -135,6 +135,8 @@ const DEFAULT_JOIN = {
   entryCode: "JOINNCU1",
   passcode: "1234",
   icons: ["music", "game", "food"],
+  // 自我介紹為必填，預設值讓各測試不必每次都寫。
+  bio: "很高興認識大家",
 };
 
 /** 建立一位已報到的參與者，回傳可用於後續請求的 session。 */

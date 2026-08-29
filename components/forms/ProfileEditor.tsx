@@ -112,7 +112,7 @@ export function ProfileEditor({ initial }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nickname,
-          bio: bio.trim() || null,
+          bio: bio.trim(),
           socialUrl: socialUrl.trim() || null,
           email: email.trim() || null,
           zodiac: zodiac || null,
@@ -261,12 +261,21 @@ export function ProfileEditor({ initial }: Props) {
             {bio.length}/{BIO_MAX}
           </span>
         </span>
+        <span className="text-xs text-faint">
+          卡片上最能讓人搭話的一句，不能留空
+        </span>
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
           rows={2}
+          placeholder="例如：喜歡爬山跟做甜點"
           className="resize-none rounded-sm border border-line bg-void px-3 py-2.5 text-chalk placeholder:text-faint"
         />
+        {!bio.trim() && (
+          <span className="text-xs text-moon">
+            這是必填欄位。既有的參與者若還沒填，儲存前需要補上。
+          </span>
+        )}
       </label>
 
       <fieldset className="flex flex-col gap-2">
@@ -317,7 +326,7 @@ export function ProfileEditor({ initial }: Props) {
 
       <button
         onClick={save}
-        disabled={saved || saving || !iconsComplete || !nickname.trim()}
+        disabled={saved || saving || !iconsComplete || !nickname.trim() || !bio.trim()}
         className="tap-target glow-neon sticky bottom-[var(--safe-bottom)] rounded-sm bg-neon py-3 font-bold text-void disabled:bg-line disabled:text-faint disabled:shadow-none"
       >
         {saved ? "已儲存，返回中…" : saving ? "儲存中…" : "儲存"}

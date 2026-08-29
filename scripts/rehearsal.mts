@@ -45,6 +45,7 @@ async function join(nickname: string, extra: Record<string, unknown> = {}): Prom
     passcode: "1234",
     nickname,
     icons: ["music", "game", "food"],
+    bio: "請多指教！",
     ...extra,
   });
   if (r.status !== 201) throw new Error(`${nickname} 報到失敗: ${JSON.stringify(r.body)}`);
@@ -80,6 +81,7 @@ for (let i = 1; i <= 2; i++) {
     passcode: "1234",
     nickname: `幹部${i}`,
     icons: ["star", "code", "gym"],
+    bio: "有問題都可以問我",
   });
   staff.push({
     cookie: (r.res.headers.get("set-cookie") ?? "").split(";")[0],
@@ -270,6 +272,7 @@ const joinAfter = await api("/api/join", {
   passcode: "1234",
   nickname: "太晚了",
   icons: ["music", "game", "food"],
+  bio: "我來太晚了",
 });
 expect("封存後無法再報到", joinAfter.status === 409);
 

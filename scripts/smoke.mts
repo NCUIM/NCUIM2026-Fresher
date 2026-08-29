@@ -33,7 +33,12 @@ async function api(path: string, body: unknown, cookie?: string) {
   return { status: res.status, body: await res.json(), res };
 }
 
-const BASE_JOIN = { entryCode: "JOINNCU1", passcode: "1234", icons: ["music", "game", "food"] };
+const BASE_JOIN = {
+  entryCode: "JOINNCU1",
+  passcode: "1234",
+  icons: ["music", "game", "food"],
+  bio: "很高興認識大家",
+};
 
 async function join(nickname: string, overrides: Record<string, unknown> = {}) {
   const r = await api("/api/join", { ...BASE_JOIN, nickname, ...overrides });

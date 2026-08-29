@@ -74,6 +74,7 @@ describe("活動設定", () => {
       passcode: "1234",
       nickname: "用舊碼的人",
       icons: ["music", "game", "food"],
+      bio: "測試用",
     });
 
     assert.equal(withOld.status, 403, "舊通關碼應被拒絕");
@@ -88,6 +89,7 @@ describe("活動設定", () => {
       passcode: "NEWPASS",
       nickname: "用新碼的人",
       icons: ["music", "game", "food"],
+      bio: "測試用",
     });
 
     assert.equal(withNew.status, 201);

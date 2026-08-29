@@ -65,6 +65,7 @@ describe("封存", () => {
       passcode: "1234",
       nickname: "遲到的人",
       icons: ["music", "game", "food"],
+      bio: "我來晚了",
     });
 
     assert.equal(res.status, 409);

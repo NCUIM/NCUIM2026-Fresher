@@ -18,7 +18,7 @@ const field =
  * 報到表單，分兩步。
  *
  * 先前八個欄位一次攤開，在報到人潮中很容易讓人放棄。
- * 第一步只放「沒有就無法進場」的三項，第二步才是能讓別人認識你的資料，
+ * 第一步只放「沒有就無法進場」的四項，第二步才是能讓別人認識你的資料，
  * 而且可以跳過——之後在個人資料頁隨時能補。
  *
  * 信箱放在第二步的最上面並說明理由：它不是必要條件，
@@ -50,7 +50,11 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
   }
 
   const iconsComplete = icons.length === REQUIRED_ICON_COUNT;
-  const step1Ready = passcode.trim() !== "" && nickname.trim() !== "" && iconsComplete;
+  const step1Ready =
+    passcode.trim() !== "" &&
+    nickname.trim() !== "" &&
+    bio.trim() !== "" &&
+    iconsComplete;
 
   async function submit() {
     setError(null);
@@ -65,7 +69,7 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
           passcode,
           nickname,
           socialUrl: socialUrl.trim() || null,
-          bio: bio.trim() || null,
+          bio: bio.trim(),
           email: email.trim() || null,
           zodiac: zodiac || null,
           university: university.trim() || null,
@@ -158,6 +162,24 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
               onChange={(e) => setNickname(e.target.value)}
               maxLength={NICKNAME_MAX}
               className={field}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="flex items-center justify-between text-sm font-bold">
+              <span>一句話自我介紹</span>
+              <span className="px text-xs font-normal text-faint">
+                {bio.length}/{BIO_MAX}
+              </span>
+            </span>
+            <span className="text-xs text-faint">
+              卡片上最能讓人搭話的一句。例如：喜歡爬山跟做甜點
+            </span>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+              rows={2}
+              className={`resize-none ${field}`}
             />
           </label>
 
@@ -259,22 +281,6 @@ export function JoinForm({ entryCode, eventName, roleLabel }: Props) {
             <ZodiacField value={zodiac} onChange={setZodiac} />
             <UniversityField value={university} onChange={setUniversity} />
           </div>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="flex items-center justify-between text-sm font-bold">
-              <span>一句話自我介紹</span>
-              <span className="px text-xs font-normal text-faint">
-                {bio.length}/{BIO_MAX}
-              </span>
-            </span>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
-              rows={2}
-              placeholder="最能製造話題的一句話"
-              className={`resize-none ${field}`}
-            />
-          </label>
 
           {error && (
             <p

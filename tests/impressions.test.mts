@@ -77,4 +77,16 @@ describe("Impression 撰寫", () => {
 
     assert.equal(res.status, 400);
   });
+
+  it("自我介紹為必填，留空的報到被拒絕", async () => {
+    const res = await post("/api/join", {
+      entryCode: "JOINNCU1",
+      passcode: "1234",
+      nickname: "沒寫自介的人",
+      icons: ["music", "game", "food"],
+      bio: "   ",
+    });
+
+    assert.equal(res.status, 400, "只有暱稱和圖示的卡片，別人看了不知道能聊什麼");
+  });
 });

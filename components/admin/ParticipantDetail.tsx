@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SHOWCASE_SIZE } from "@/lib/validation";
+import { Avatar } from "@/components/card/Avatar";
 
 type Detail = {
   nickname: string;
@@ -70,12 +71,12 @@ export function ParticipantDetail({ participantId }: { participantId: string }) 
                 }`}
               >
                 {s ? (
-                  s.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.avatarUrl} alt="" className="size-full object-cover" />
-                  ) : (
-                    <span className="truncate px-0.5">{s.nickname}</span>
-                  )
+                  <Avatar
+                    src={s.avatarUrl}
+                    nickname={s.nickname}
+                    className="size-full text-[9px]"
+                    rounded="rounded-none"
+                  />
                 ) : null}
               </div>
             );

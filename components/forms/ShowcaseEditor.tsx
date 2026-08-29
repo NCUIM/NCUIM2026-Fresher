@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 // 在 client component 中會把資料庫驅動打包進瀏覽器套件。
 import { SHOWCASE_SIZE } from "@/lib/validation";
 import { EmptySlot, SlotFace } from "@/components/showcase/SlotFace";
+import { Avatar } from "@/components/card/Avatar";
 
 type Candidate = { id: string; nickname: string; avatarUrl: string | null };
 
@@ -25,29 +26,15 @@ const DRAG_THRESHOLD = 8;
  * 九宮格是拿來回想「這九個人是誰」的，臉比名字快得多——
  * 而且暱稱在格子裡被截斷後常常認不出來。
  */
-function Avatar({
+function CandidateAvatar({
   person,
   className,
 }: {
   person: Candidate;
   className: string;
 }) {
-  if (person.avatarUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={person.avatarUrl}
-        alt=""
-        className={`${className} shrink-0 rounded-full object-cover`}
-      />
-    );
-  }
   return (
-    <span
-      className={`${className} grid shrink-0 place-items-center rounded-full bg-void text-sm text-faint`}
-    >
-      {person.nickname.slice(0, 1)}
-    </span>
+    <Avatar src={person.avatarUrl} nickname={person.nickname} className={className} />
   );
 }
 
@@ -292,7 +279,7 @@ export function ShowcaseEditor({
                         : "border-line text-chalk"
                     }`}
                   >
-                    <Avatar person={c} className="size-8" />
+                    <CandidateAvatar person={c} className="size-8" />
                     <span className="flex-1 truncate">{c.nickname}</span>
                     <span className="px text-sm">{picked ? "✓" : "＋"}</span>
                   </div>

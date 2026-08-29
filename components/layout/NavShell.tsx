@@ -2,6 +2,7 @@ import { getCurrentParticipant } from "@/lib/session";
 import { pendingImpressions } from "@/lib/score";
 import { listAnnouncements } from "@/lib/announcements";
 import { BottomNav } from "./BottomNav";
+import { QuickAccess } from "./QuickAccess";
 
 /**
  * 有底部導覽列的頁面用這個外框。
@@ -27,6 +28,8 @@ export async function NavShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </div>
+      {/* 公告與排行榜的浮動快捷。只有已報到者看得到——未報到時兩者都是空的。 */}
+      {me && <QuickAccess unreadAnnouncements={announcements.unreadCount} />}
       <BottomNav
         pendingImpressions={pending.length}
         unreadAnnouncements={announcements.unreadCount}

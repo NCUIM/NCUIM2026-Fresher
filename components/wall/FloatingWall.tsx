@@ -1,7 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WallImpression } from "@/lib/wall";
+
+/**
+ * 由 id 推導出穩定的偽亂數。
+ *
+ * 位置要看起來隨機，但**不能每次重新整理就跳到別的地方**——這面牆是
+ * 使用者會反覆回來看的東西，每次排版都不同就認不出「那一則在哪」。
+ * 用 id 當種子，同一則永遠落在同一處，不同則之間則毫無規律。
+ */
+function seeded(id: string, salt: number): number {
+  let h = 2166136261 ^ salt;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 10000) / 10000;
+}
+
+/** 火花數量。太多會在低階手機上掉幀，太少看不出是爆開。 */
+const SPARK_COUNT = 10;
+
+/** 卡片放大到彈窗出現之間的間隔，讓放大這件事被看見。 */
+const POP_DELAY_MS = 260;
 
 /**
  * 漂浮呈現。
@@ -34,6 +56,42 @@ export function FloatingWall({
   const [busy, setBusy] = useState(false);
   // 檢舉要二次確認：它會驚動主辦方，而且送出後不能撤回。
   const [confirmingReport, setConfirmingReport] = useState(false);
+
+  // 正在被點開的那一則：放大並提到最上層，火花從它中心炸開。
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [spark, setSpark] = useState<{ x: number; y: number; key: number } | null>(
+    null,
+  );
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // 元件卸載時清掉待觸發的計時器，否則會在已卸載的元件上 setState。
+  useEffect(
+    () => () => {
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+    },
+    [],
+  );
+
+  /** 點一張卡片：先放大＋火花，再開內容。 */
+  function activate(item: WallImpression, e: React.MouseEvent<HTMLElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    setActiveId(item.id);
+    setSpark({
+      x: r.left + r.width / 2,
+      y: r.top + r.height / 2,
+      // key 讓同一張卡片連按兩次也會重播動畫——沒有它，React 會沿用
+      // 同一個節點，動畫不會重新開始。
+      key: Date.now(),
+    });
+    timers.current.push(
+      setTimeout(() => {
+        setSelectedId(item.id);
+        setActiveId(null);
+        setSpark(null);
+      }, POP_DELAY_MS),
+    );
+  }
 
   // 從 items 找而不是存整個物件，這樣切換隱藏後彈窗內容會跟著更新。
   const selected = items.find((i) => i.id === selectedId) ?? null;
@@ -123,37 +181,42 @@ export function FloatingWall({
             這面牆上的內容都被你隱藏了。
           </p>
         ) : (
-          visible.map((item, i) => (
+          visible.map((item) => (
             <button
               key={item.id}
-              onClick={() => setSelectedId(item.id)}
+              onClick={(e) => activate(item, e)}
               className={`wall-card absolute max-w-[72%] rounded-lg px-3 py-2 text-left ${
-                // 唯讀檢視下，被回報的最顯眼，其次是被隱藏的——
-                // 那個排序就是審核時該處理的順序。
-                readOnly && item.reported
-                  ? "z-20 border border-flare bg-flare/15 text-flare"
-                  : readOnly && item.hidden
-                    ? "z-10 border border-moon/60 bg-moon/10 text-moon"
-                    : item.featured
-                      ? "z-10 border border-moon bg-void text-moon shadow-[0_0_14px_rgba(255,206,92,0.22)]"
-                      : "border border-line bg-slate text-dim"
+                // 被點開的那一則提到最上層並放大，其餘維持原本的層級。
+                activeId === item.id
+                  ? "wall-card-active z-40 border-2 border-neon bg-void text-chalk shadow-[0_0_28px_rgba(44,232,181,0.5)]"
+                  : // 唯讀檢視下，被回報的最顯眼，其次是被隱藏的——
+                    // 那個排序就是審核時該處理的順序。
+                    readOnly && item.reported
+                    ? "z-20 border border-flare bg-flare/15 text-flare"
+                    : readOnly && item.hidden
+                      ? "z-10 border border-moon/60 bg-moon/10 text-moon"
+                      : item.featured
+                        ? "z-10 border border-moon bg-void text-moon shadow-[0_0_14px_rgba(255,206,92,0.22)]"
+                        : "border border-line bg-slate text-dim"
               }`}
               style={
                 {
-                  // 以索引推導位置與節奏，讓每張卡片的漂浮軌跡各不相同，
-                  // 但重新整理後保持一致，不會每次都跳到別的地方。
-                  left: `${6 + ((i * 37) % 52)}%`,
-                  top: `${5 + ((i * 53) % 78)}%`,
-                  "--drift-delay": `${(i % 7) * -1.4}s`,
-                  "--drift-duration": `${9 + (i % 5) * 1.6}s`,
-                  // 交錯方向，否則所有卡片會像同一塊布一起平移，看不出在漂。
-                  "--drift-x": `${i % 2 === 0 ? 8 : -8}%`,
-                  "--drift-y": `${i % 3 === 0 ? -10 : 9}%`,
-                  "--drift-rot": `${i % 2 === 0 ? 2 : -2}deg`,
+                  /*
+                    位置與節奏由 id 推導，看起來隨機但每次都落在同一處——
+                    這面牆是會反覆回來看的東西，每次重排就認不出哪則是哪則。
+                  */
+                  left: `${4 + seeded(item.id, 1) * 56}%`,
+                  top: `${4 + seeded(item.id, 2) * 76}%`,
+                  "--drift-delay": `${-seeded(item.id, 3) * 8}s`,
+                  "--drift-duration": `${7 + seeded(item.id, 4) * 7}s`,
+                  // 方向與幅度都各自不同，否則整面牆會像一塊布一起平移。
+                  "--drift-x": `${(seeded(item.id, 5) - 0.5) * 26}%`,
+                  "--drift-y": `${(seeded(item.id, 6) - 0.5) * 26}%`,
+                  "--drift-rot": `${(seeded(item.id, 7) - 0.5) * 8}deg`,
                 } as React.CSSProperties
               }
             >
-              <p className="text-xs leading-snug">{item.text}</p>
+              <p className="text-xs leading-snug break-words">{item.text}</p>
               <p
                 className={`mt-1 text-[10px] ${item.featured ? "text-moon/70" : "text-faint"}`}
               >
@@ -193,6 +256,35 @@ export function FloatingWall({
             ))}
           </ul>
         </details>
+      )}
+
+      {/*
+        點擊的火花。用 fixed 定位到被點的卡片中心，pointer-events:none
+        讓它不會擋住底下的東西——它純粹是回饋，不是可互動的元素。
+      */}
+      {spark && (
+        <div
+          key={spark.key}
+          aria-hidden="true"
+          className="pointer-events-none fixed z-50"
+          style={{ left: spark.x, top: spark.y }}
+        >
+          {Array.from({ length: SPARK_COUNT }, (_, i) => {
+            const angle = (360 / SPARK_COUNT) * i + seeded(String(spark.key), i) * 24;
+            return (
+              <span
+                key={i}
+                className="wall-spark"
+                style={
+                  {
+                    "--spark-angle": `${angle}deg`,
+                    "--spark-distance": `${38 + seeded(String(spark.key), i + 50) * 34}px`,
+                  } as React.CSSProperties
+                }
+              />
+            );
+          })}
+        </div>
       )}
 
       {purgeDate && (

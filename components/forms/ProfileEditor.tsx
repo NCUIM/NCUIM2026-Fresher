@@ -9,6 +9,7 @@ import { UniversityField, ZodiacField } from "./ProfileFields";
 import { CardStylePicker } from "./CardStylePicker";
 import { DEFAULT_CARD_COLOR } from "@/lib/card-colors";
 import { isPresetAvatar } from "@/lib/avatars";
+import { Avatar } from "@/components/card/Avatar";
 
 type Props = {
   initial: {
@@ -166,18 +167,11 @@ export function ProfileEditor({ initial }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col items-center gap-3">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt="你的頭像"
-            className="size-24 rounded-full object-cover"
-          />
-        ) : (
-          <div className="flex size-24 items-center justify-center rounded-full bg-slate text-3xl text-faint">
-            {nickname.slice(0, 1) || "?"}
-          </div>
-        )}
+        <Avatar
+          src={avatarUrl}
+          nickname={nickname || "?"}
+          className="size-24 text-3xl"
+        />
 
         <input
           ref={fileRef}

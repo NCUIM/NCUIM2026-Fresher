@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CardView } from "@/lib/cards";
+import { Avatar } from "./Avatar";
 import { CardPopup, popOriginFrom, type PopOrigin } from "./CardPopup";
 
 /**
@@ -48,18 +49,12 @@ export function CardGrid({
                 ))}
               </span>
 
-              {card.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={card.avatarUrl}
-                  alt=""
-                  className="aspect-square w-full rounded-lg border border-line object-cover"
-                />
-              ) : (
-                <span className="grid aspect-square w-full place-items-center rounded-lg border border-line bg-void text-2xl font-black text-faint">
-                  {card.nickname.slice(0, 1)}
-                </span>
-              )}
+              <Avatar
+                src={card.avatarUrl}
+                nickname={card.nickname}
+                className="aspect-square w-full border border-line text-2xl"
+                rounded="rounded-lg"
+              />
 
               <span className="w-full truncate px-1 text-center text-xs text-dim">
                 {card.nickname}

@@ -1,4 +1,5 @@
 import type { CardView } from "@/lib/cards";
+import { Avatar } from "./Avatar";
 
 /**
  * 純呈現元件，無互動邏輯，因此不需要 "use client"。
@@ -52,18 +53,12 @@ export function CardDisplay({
           tone === "flare" ? "border-flare" : ""
         }`}
       >
-        {card.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={card.avatarUrl}
-            alt=""
-            className="aspect-square w-full rounded-sm object-cover"
-          />
-        ) : (
-          <div className="grid aspect-square w-full place-items-center rounded-sm bg-slate text-5xl font-black text-faint">
-            {card.nickname.slice(0, 1)}
-          </div>
-        )}
+        <Avatar
+          src={card.avatarUrl}
+          nickname={card.nickname}
+          className="aspect-square w-full text-5xl"
+          rounded="rounded-sm"
+        />
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
@@ -114,7 +109,15 @@ export function CardDisplay({
         </div>
       )}
 
-      {card.bio && <p className="text-center text-sm text-dim">{card.bio}</p>}
+      {/*
+        break-words：50 字的上限擋得住長度，擋不住「沒有空格的長字串」。
+        中文會自然斷行，連續的拉丁字母不會——那會直接把卡片撐破。
+      */}
+      {card.bio && (
+        <p className="w-full text-center text-sm break-words text-dim">
+          {card.bio}
+        </p>
+      )}
 
       {card.socialUrl && (
         <a

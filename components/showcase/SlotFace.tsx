@@ -1,3 +1,5 @@
+import { Avatar } from "@/components/card/Avatar";
+
 /**
  * 九宮格裡一個人的呈現：頭像 ＋ 暱稱。
  *
@@ -18,20 +20,7 @@ export function SlotFace({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-1.5">
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={avatarUrl}
-          alt=""
-          className={`${avatarClass} shrink-0 rounded-full object-cover`}
-        />
-      ) : (
-        <span
-          className={`${avatarClass} grid shrink-0 place-items-center rounded-full bg-void text-sm text-faint`}
-        >
-          {nickname.slice(0, 1)}
-        </span>
-      )}
+      <Avatar src={avatarUrl} nickname={nickname} className={avatarClass} />
       <span className="w-full truncate px-1 text-center text-[11px] leading-tight text-neon">
         {nickname}
       </span>

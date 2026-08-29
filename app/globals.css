@@ -197,6 +197,38 @@ body::before {
   }
 }
 
+/* 被點開的那一則：放大並停住漂浮，讓它明確從牆面「浮出來」。
+   動畫停掉是必要的——邊漂邊放大會讓人看不清楚點到了哪一張。 */
+.wall-card-active {
+  animation: none;
+  transform: scale(1.18);
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 點擊的火花。每一顆的角度與距離由 JS 給值，
+   一起往外炸開再淡出——沒有這個回饋，點下去到彈窗出現之間是空白的。 */
+.wall-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-neon, #2ce8b5);
+  box-shadow: 0 0 8px var(--color-neon, #2ce8b5);
+  animation: wall-spark 460ms ease-out forwards;
+}
+
+@keyframes wall-spark {
+  from {
+    transform: rotate(var(--spark-angle)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(var(--spark-angle)) translateX(var(--spark-distance))
+      scale(0.2);
+    opacity: 0;
+  }
+}
+
 /* ───────────────────────────────────────────────
    卡片展開：從被點擊的那張長出來
    ─────────────────────────────────────────────── */
@@ -262,6 +294,13 @@ body::before {
   /* 縮放旋轉的彈出對前庭功能敏感的人不友善，直接顯示即可。 */
   .card-pop {
     animation: none;
+  }
+  /* 火花是純裝飾，關掉不影響任何功能。 */
+  .wall-spark {
+    display: none;
+  }
+  .wall-card-active {
+    transform: none;
   }
   .reveal-scan,
   .reveal-card {

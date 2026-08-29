@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SHOWCASE_SIZE } from "@/lib/validation";
 import { FloatingWall } from "@/components/wall/FloatingWall";
 import type { WallImpression } from "@/lib/wall";
+import { Avatar } from "@/components/card/Avatar";
 
 type Entry = {
   rank: number;
@@ -169,16 +170,12 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                         }`}
                       >
                         {s ? (
-                          s.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={s.avatarUrl}
-                              alt=""
-                              className="size-full object-cover"
-                            />
-                          ) : (
-                            <span className="truncate px-1">{s.nickname}</span>
-                          )
+                          <Avatar
+                            src={s.avatarUrl}
+                            nickname={s.nickname}
+                            className="size-full text-[10px]"
+                            rounded="rounded-none"
+                          />
                         ) : (
                           <span className="px">
                             {String(i + 1).padStart(2, "0")}

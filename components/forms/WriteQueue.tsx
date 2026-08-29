@@ -89,7 +89,7 @@ export function WriteQueue({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{w.nickname}</p>
-                <p className="mt-0.5 text-xs whitespace-pre-wrap text-dim">
+                <p className="mt-0.5 text-xs break-words whitespace-pre-wrap text-dim">
                   {w.text}
                 </p>
               </div>

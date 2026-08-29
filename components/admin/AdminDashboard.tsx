@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { iconByKey } from "@/lib/icons";
 import { zodiacByKey } from "@/lib/zodiac";
 import { ParticipantDetail } from "./ParticipantDetail";
+import { Avatar } from "@/components/card/Avatar";
 
 /**
  * Participant 的完整內容，唯一的例外是 sessionToken。
@@ -373,18 +374,11 @@ export function AdminDashboard({
                 <details>
                   {/* 收合狀態只放認人需要的：頭像、暱稱、姓名、身分、組別。 */}
                   <summary className="flex cursor-pointer items-center gap-2 p-3">
-                    {p.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={p.avatarUrl}
-                        alt=""
-                        className="size-8 shrink-0 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate text-xs text-faint">
-                        {p.nickname.slice(0, 1)}
-                      </span>
-                    )}
+                    <Avatar
+                      src={p.avatarUrl}
+                      nickname={p.nickname}
+                      className="size-8 text-xs"
+                    />
 
                     <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="font-medium">{p.nickname}</span>

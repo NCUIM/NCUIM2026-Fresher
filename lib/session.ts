@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
@@ -47,7 +48,19 @@ export async function getSessionToken(): Promise<string | null> {
 }
 
 /** 取得目前登入的 Participant，未登入則回傳 null。 */
-export async function getCurrentParticipant() {
+/**
+ * 目前登入的 Participant。
+ *
+ * 用 React 的 cache 包起來：一次請求裡不管被呼叫幾次，資料庫只查一次。
+ *
+ * 這不是可有可無的最佳化。這個函式散在三十個檔案裡，而伺服器元件是
+ * 各自獨立取資料的——外框 NavShell 要它、頁面本身要它、頁面裡的元件
+ * 也要它。實測 /me 一次載入打了七次 Participant 查詢，全部是同一列。
+ * 資料庫在新加坡、函式在別的區域時，每一次都是一趟跨海往返。
+ *
+ * cache 的範圍是「單一請求」，所以不會有跨使用者拿到別人資料的問題。
+ */
+export const getCurrentParticipant = cache(async () => {
   const token = await getSessionToken();
   if (!token) return null;
 
@@ -55,4 +68,4 @@ export async function getCurrentParticipant() {
     where: { sessionToken: token },
     include: { event: true, team: true },
   });
-}
+});

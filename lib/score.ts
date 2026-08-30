@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "./prisma";
 
 export type ScoreBreakdown = {
@@ -16,9 +17,16 @@ export type ScoreBreakdown = {
  * 實作上直接計算作者為本人的 Impression 數量：撰寫時已強制要求對象必須
  * 已收集，因此「我寫過的 Impression 數」恆等於「我已入帳的 Collection 數」。
  */
-export async function computeScore(
+/*
+  用 React 的 cache 包起來：一次請求裡不管被呼叫幾次，資料庫只查一次。
+
+  伺服器元件各自取各自的資料——外框、頁面、頁面裡的元件都可能要同一份。
+  實測 /me 一次載入打了 25 次查詢，其中七次是同一列 Participant、
+  公告查了兩遍。cache 的範圍是單一請求，不會跨使用者。
+*/
+export const computeScore = cache(async (
   participantId: string,
-): Promise<ScoreBreakdown> {
+): Promise<ScoreBreakdown> => {
   const participant = await prisma.participant.findUnique({
     where: { id: participantId },
     select: { event: { select: { basePoints: true } } },
@@ -40,7 +48,7 @@ export async function computeScore(
   const achievement = earned._sum.pointsAwarded ?? 0;
 
   return { base, achievement, total: base + achievement };
-}
+});
 
 export type PendingImpression = {
   subjectId: string;
@@ -53,9 +61,9 @@ export type PendingImpression = {
  * 這份清單同時是待辦提示與計分缺口的來源——每一筆都代表一份還沒入帳的
  * 基礎分，讓使用者看得到「回頭補寫就能拿到分數」。
  */
-export async function pendingImpressions(
+export const pendingImpressions = cache(async (
   participantId: string,
-): Promise<PendingImpression[]> {
+): Promise<PendingImpression[]> => {
   const written = await prisma.impression.findMany({
     where: { authorId: participantId },
     select: { subjectId: true },
@@ -74,7 +82,7 @@ export async function pendingImpressions(
     subjectId: c.subject.id,
     nickname: c.subject.nickname,
   }));
-}
+});
 
 export type WrittenImpression = PendingImpression & { text: string };
 

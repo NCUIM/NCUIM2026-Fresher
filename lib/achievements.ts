@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { AchievementDef, Participant } from "@prisma/client";
 import { prisma } from "./prisma";
 
@@ -94,10 +95,21 @@ export async function evaluateAchievements(participantId: string): Promise<void>
   ]);
   const earnedIds = new Set(earned.map((e) => e.achievementDefId));
 
-  for (const def of defs) {
-    if (earnedIds.has(def.id)) continue; // 已達成者不再評估，也就不可能被撤銷
+  /*
+    先平行量完所有進度，再循序處理發放。
 
-    const m = await measure(def, me);
+    每個 measure 是獨立的一到兩個查詢，寫成迴圈裡 await 就變成七趟往返
+    疊加——而這個函式每次讀 /api/me、每次掃描完都會跑一遍。
+
+    發放本身仍然逐一進行：那是寫入，而且併發時要靠唯一鍵擋重複，
+    平行化省不到什麼、又讓錯誤處理變複雜。
+  */
+  const pending = defs.filter((def) => !earnedIds.has(def.id));
+  const measurements = await Promise.all(
+    pending.map(async (def) => [def, await measure(def, me)] as const),
+  );
+
+  for (const [def, m] of measurements) {
     if (!m || m.current < m.target) continue;
 
     await prisma.achievementEarned
@@ -145,9 +157,9 @@ export type AchievementStatus =
  * 隱藏成就在達成前**不得透露名稱、條件與進度**——只回傳 key 與 hidden 旗標，
  * 讓前端顯示為「隱藏成就」。這是在伺服器端就把資訊剪掉，而不是靠前端不去畫。
  */
-export async function getAchievementStatus(
+export const getAchievementStatus = cache(async (
   participantId: string,
-): Promise<AchievementStatus[]> {
+): Promise<AchievementStatus[]> => {
   const me = await prisma.participant.findUnique({ where: { id: participantId } });
   if (!me) return [];
 
@@ -159,6 +171,18 @@ export async function getAchievementStatus(
     prisma.achievementEarned.findMany({ where: { participantId } }),
   ]);
   const earnedByDef = new Map(earnedRows.map((r) => [r.achievementDefId, r]));
+
+  /*
+    同樣先平行量完。已達成與隱藏的不必量——前者顯示的是達成當下凍結的
+    分值，後者根本不揭露進度——先濾掉，省下的是真正不需要的查詢。
+  */
+  const measured = new Map(
+    await Promise.all(
+      defs
+        .filter((def) => !earnedByDef.has(def.id) && !def.hidden)
+        .map(async (def) => [def.id, await measure(def, me)] as const),
+    ),
+  );
 
   const out: AchievementStatus[] = [];
   for (const def of defs) {
@@ -182,7 +206,7 @@ export async function getAchievementStatus(
       continue;
     }
 
-    const m = await measure(def, me);
+    const m = measured.get(def.id) ?? null;
     out.push({
       key: def.key,
       earned: false,
@@ -194,4 +218,4 @@ export async function getAchievementStatus(
     });
   }
   return out;
-}
+});

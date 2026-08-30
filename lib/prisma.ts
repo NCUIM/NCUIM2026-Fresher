@@ -24,9 +24,19 @@ function createPrismaClient() {
   if (!connectionString) {
     throw new Error("DATABASE_URL 未設定，請參考 .env.example 建立 .env");
   }
-  return new PrismaClient({
+  const client = new PrismaClient({
     adapter: new PrismaPg({ connectionString, max: POOL_MAX }),
+    /*
+      查詢紀錄預設關閉，用 DB_LOG_QUERIES=1 打開。
+
+      需要它是因為「這一頁到底打了幾次資料庫」用讀的推不準——伺服器
+      元件、版面外框與各個 lib 函式各自查各自的，很容易同一份資料被
+      取了兩三次。而每一次都是一趟往返，資料庫在新加坡、函式在美國時，
+      那個數字直接乘上兩百毫秒。
+    */
+    log: process.env.DB_LOG_QUERIES === "1" ? ["query"] : [],
   });
+  return client;
 }
 
 // 開發模式下 Next.js 的熱重載會重複建立模組，若不快取會耗盡連線數。

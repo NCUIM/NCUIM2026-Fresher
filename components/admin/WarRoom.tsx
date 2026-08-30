@@ -189,6 +189,8 @@ export function WarRoom({
   const [error, setError] = useState<string | null>(null);
   const [showRanking, setShowRanking] = useState(true);
   const [clock, setClock] = useState("");
+  /** 星圖上被點選的節點。點空白處會變回 null。 */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [alert, setAlert] = useState({ n: 0, gold: false });
   /*
     左欄寬度。
@@ -313,6 +315,8 @@ export function WarRoom({
     clearEdges();
     clearFeed();
     setData(null);
+    // 選取也要清掉，否則會停在上一場活動裡不存在的那個人身上。
+    setSelectedId(null);
   }, [eventId, clearEdges, clearFeed]);
 
   useEffect(() => {
@@ -437,6 +441,38 @@ export function WarRoom({
 
   const maxInitiative = Math.max(1, ...initiative.map((i) => i.count));
   const stats = data?.stats;
+
+  /*
+    被點選的那個人，以及他跟誰相遇過。
+
+    星圖那邊已經把相關的線點亮了，但在密集的網裡「亮起來的線通向誰」
+    仍然難讀。這裡把名單列出來，並照相遇時間排序——最近的在最上面，
+    那通常是主辦方想知道的（「他剛剛跟誰講到話」）。
+  */
+  const selection = useMemo(() => {
+    if (!selectedId || !data) return null;
+    const node = data.nodes.find((n) => n.id === selectedId);
+    if (!node) return null;
+
+    const nameById = new Map(data.nodes.map((n) => [n.id, n.nickname]));
+    const met = data.edges
+      .filter((e) => e.scannerId === selectedId || e.scannedId === selectedId)
+      .map((e) => {
+        const otherId =
+          e.scannerId === selectedId ? e.scannedId : e.scannerId;
+        return {
+          id: e.id,
+          nickname: nameById.get(otherId) ?? "—",
+          at: e.at,
+          // 誰主動的。Scan 只歸屬發起方，那是衡量主動程度的唯一依據。
+          initiated: e.scannerId === selectedId,
+        };
+      })
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+    const rank = data.ranking.find((r) => r.participantId === selectedId);
+    return { node, met, rank };
+  }, [selectedId, data]);
 
   return (
     <div className="warroom relative flex h-dvh flex-col overflow-hidden bg-void text-chalk">
@@ -605,12 +641,90 @@ export function WarRoom({
               freshEdges={freshEdges}
               achievements={freshAchievements}
               maxAchievementPoints={data.stats.maxAchievementPoints}
+              onSelect={setSelectedId}
             />
           )}
         </div>
 
-        {/* 右欄：事件牆 ＋ 排行榜 */}
+        {/* 右欄：選取詳情（有選才出現）＋ 事件牆 ＋ 排行榜 */}
         <aside className="flex w-80 shrink-0 flex-col gap-3 p-4">
+          {/*
+            點選節點後的詳情。
+
+            放在右欄最上方而不是浮在星圖上：浮層會蓋住那張網，而使用者
+            點某個節點的目的正是要看那個人在網裡的位置。
+          */}
+          {selection && (
+            <section className="warroom-panel flex max-h-[45%] min-h-0 flex-col p-3">
+              <div className="mb-2 flex items-baseline justify-between gap-2">
+                <h2 className="warroom-title">已選取</h2>
+                <button
+                  onClick={() => setSelectedId(null)}
+                  aria-label="取消選取"
+                  className="tap-target rounded-sm px-2 text-xs text-faint transition-colors hover:text-flare"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-base font-bold text-moon">
+                  {selection.node.nickname}
+                </span>
+                {selection.node.role === "STAFF" && (
+                  <span className="rounded-full border border-line px-2 text-[10px] text-dim">
+                    工作人員
+                  </span>
+                )}
+                <span className="px text-xs text-neon">
+                  {selection.node.score} 分
+                </span>
+                {selection.rank && (
+                  <span className="px text-xs text-faint">
+                    第 {selection.rank.rank} 名
+                  </span>
+                )}
+                <span className="text-xs text-faint">
+                  相遇 {selection.met.length} 人
+                </span>
+              </div>
+
+              <ul className="min-h-0 flex-1 overflow-y-auto pr-1">
+                {selection.met.map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center gap-2 border-b border-line/40 py-1 text-xs"
+                  >
+                    {/*
+                      箭頭方向就是誰主動。一次 Scan 讓雙方各得一張卡，
+                      但發起方只有一個——那是這面畫面唯一看得出
+                      「誰比較主動」的地方。
+                    */}
+                    <span
+                      className="px w-4 shrink-0 text-center text-faint"
+                      title={m.initiated ? "他主動掃描對方" : "對方掃描他"}
+                    >
+                      {m.initiated ? "→" : "←"}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{m.nickname}</span>
+                    <time className="px shrink-0 text-[10px] text-faint">
+                      {new Date(m.at).toLocaleTimeString("zh-TW", {
+                        hour12: false,
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  </li>
+                ))}
+                {selection.met.length === 0 && (
+                  <li className="py-4 text-center text-xs text-faint">
+                    還沒有跟任何人相遇。
+                  </li>
+                )}
+              </ul>
+            </section>
+          )}
+
           <section className="warroom-panel flex min-h-0 flex-1 flex-col p-3">
             <h2 className="warroom-title mb-2">警報資訊</h2>
             <ul className="min-h-0 flex-1 overflow-y-auto pr-1">

@@ -166,6 +166,7 @@ export function WarRoomScene({
   freshEdges,
   achievements,
   maxAchievementPoints,
+  onSelect,
 }: {
   nodes: SceneNode[];
   edges: SceneEdge[];
@@ -175,6 +176,14 @@ export function WarRoomScene({
   achievements: AchievementBurst[];
   /** 這場活動裡最高的成就分值，用來換算等級。 */
   maxAchievementPoints: number;
+  /**
+   * 點選節點時回報給外層。點空白處會收到 null。
+   *
+   * 星圖只負責「哪一個被選中」與「把它的連線highlight起來」；
+   * 那個人是誰、跟誰連過，交給外層用 DOM 呈現——在 canvas 上排版
+   * 一段可讀的文字，遠比交給 HTML 麻煩，而且選不起來也複製不了。
+   */
+  onSelect?: (participantId: string | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /*
@@ -184,6 +193,12 @@ export function WarRoomScene({
   */
   const view = useRef({ zoom: 1, panX: 0, panY: 0 });
   const [zoomLabel, setZoomLabel] = useState(1);
+  /*
+    被點選的節點。放在 ref 而不是 state：繪製迴圈每一幀都要讀它，
+    而 state 的更新會讓整個元件重新渲染。畫面上要顯示的那份資訊
+    由 onSelect 回報給外層，兩邊各拿自己需要的形式。
+  */
+  const selectedRef = useRef<string | null>(null);
 
   const onViewChange = useCallback((z: number) => setZoomLabel(z), []);
 
@@ -222,6 +237,10 @@ export function WarRoomScene({
     achievements,
     maxAchievementPoints,
   };
+
+  // 回呼放進 ref，繪製迴圈才不用把它列進 effect 的相依。
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   // 已經演過漣漪的 id。沒有這個，同一筆相遇會在每一輪輪詢重新炸一次。
   const playedRef = useRef({ edges: new Set<string>(), nodes: new Set<string>() });
@@ -286,8 +305,44 @@ export function WarRoomScene({
       onViewChange(next);
     }
 
-    let panning: { x: number; y: number; panX: number; panY: number } | null =
-      null;
+    let panning: {
+      x: number;
+      y: number;
+      panX: number;
+      panY: number;
+      moved: boolean;
+    } | null = null;
+
+    /** 超過這個位移就算拖曳，不算點擊。 */
+    const CLICK_SLOP = 5;
+
+    /** 螢幕座標換回場景座標。要把置中偏移與使用者的縮放平移都倒推掉。 */
+    function toScene(clientX: number, clientY: number) {
+      const box = canvas!.getBoundingClientRect();
+      const v = view.current;
+      return {
+        x: (clientX - box.left - offsetX - v.panX) / (scale * v.zoom),
+        y: (clientY - box.top - offsetY - v.panY) / (scale * v.zoom),
+      };
+    }
+
+    /**
+     * 找出點到哪一個節點。
+     *
+     * 由小到大檢查：節點重疊時，小的那個會被大的蓋住，若從大的開始找，
+     * 小節點永遠點不到。命中範圍比視覺半徑多幾個像素——投影時用滑鼠
+     * 精準點到一個十像素的圓並不容易。
+     */
+    function hitTest(clientX: number, clientY: number): Placed | null {
+      const p = toScene(clientX, clientY);
+      const byRadius = [...placed].sort((a, b) => a.r - b.r);
+      for (const node of byRadius) {
+        const dx = p.x - node.x;
+        const dy = p.y - node.y;
+        if (Math.hypot(dx, dy) <= node.r + 6) return node;
+      }
+      return null;
+    }
 
     function onPointerDown(e: PointerEvent) {
       if (e.button !== 0) return;
@@ -296,18 +351,41 @@ export function WarRoomScene({
         y: e.clientY,
         panX: view.current.panX,
         panY: view.current.panY,
+        moved: false,
       };
       canvas!.setPointerCapture(e.pointerId);
       canvas!.style.cursor = "grabbing";
     }
     function onPointerMove(e: PointerEvent) {
-      if (!panning) return;
-      view.current.panX = panning.panX + (e.clientX - panning.x);
-      view.current.panY = panning.panY + (e.clientY - panning.y);
+      if (!panning) {
+        // 沒在拖曳時，游標移到節點上就換成手指，讓「可以點」看得出來。
+        canvas!.style.cursor = hitTest(e.clientX, e.clientY)
+          ? "pointer"
+          : "grab";
+        return;
+      }
+      const dx = e.clientX - panning.x;
+      const dy = e.clientY - panning.y;
+      if (Math.hypot(dx, dy) > CLICK_SLOP) panning.moved = true;
+      view.current.panX = panning.panX + dx;
+      view.current.panY = panning.panY + dy;
     }
-    function onPointerUp() {
+    function onPointerUp(e: PointerEvent) {
+      const wasClick = panning !== null && !panning.moved;
       panning = null;
       canvas!.style.cursor = "grab";
+      if (!wasClick) return;
+
+      /*
+        點在節點上就選它，點空白處就取消。
+
+        再點一次同一個節點也是取消——那是「我看完了」最自然的動作，
+        比要求使用者去找空白處點一下好。
+      */
+      const hit = hitTest(e.clientX, e.clientY);
+      const next = hit && hit.node.id !== selectedRef.current ? hit.node.id : null;
+      selectedRef.current = next;
+      onSelectRef.current?.(next);
     }
     function onDoubleClick() {
       resetView();
@@ -478,15 +556,27 @@ export function WarRoomScene({
      * 用形狀而不是顏色區分身分——顏色已經被卡片底色用掉了，再疊一種
      * 語意上去，投影時誰也分不出哪個顏色代表什麼。形狀在餘光裡也認得出。
      */
-    function drawNode(p: Placed) {
+    function drawNode(p: Placed, focus: "selected" | "linked" | "muted" | null) {
       const active = p.ripple > 0 || p.burst !== null;
       const staff = p.node.role === "STAFF";
       ctx!.save();
-      ctx!.shadowColor = p.color;
-      ctx!.shadowBlur = active ? 24 : 7;
-      ctx!.fillStyle = rgba(p.color, active ? 0.38 : 0.16);
-      ctx!.strokeStyle = p.color;
-      ctx!.lineWidth = active ? 2.4 : 1.5;
+      // 無關的節點退到背景，讓選中的那一群浮出來。
+      ctx!.globalAlpha = focus === "muted" ? 0.22 : 1;
+      ctx!.shadowColor = focus === "selected" ? MOON : p.color;
+      ctx!.shadowBlur = focus === "selected" ? 26 : active ? 24 : 7;
+      ctx!.fillStyle = rgba(
+        p.color,
+        active || focus === "selected" ? 0.38 : 0.16,
+      );
+      ctx!.strokeStyle = focus === "selected" ? MOON : p.color;
+      ctx!.lineWidth =
+        focus === "selected"
+          ? 3
+          : focus === "linked"
+            ? 2.2
+            : active
+              ? 2.4
+              : 1.5;
       if (staff) polygonPath(p.x, p.y, p.r + 2, 6);
       else {
         ctx!.beginPath();
@@ -494,6 +584,14 @@ export function WarRoomScene({
       }
       ctx!.fill();
       ctx!.stroke();
+      // 被選中的再套一圈外環，讓它在密集的網裡一眼認得出來。
+      if (focus === "selected") {
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.r + 9, 0, Math.PI * 2);
+        ctx!.strokeStyle = rgba(MOON, 0.55);
+        ctx!.lineWidth = 1.5;
+        ctx!.stroke();
+      }
       if (staff) {
         polygonPath(p.x, p.y, p.r + 7, 6);
         ctx!.strokeStyle = rgba(p.color, 0.4);
@@ -643,10 +741,34 @@ export function WarRoomScene({
 
       // 連線先畫，節點後畫——否則線會蓋在圓上。
       dashOffset -= dt * 26;
+
+      /*
+        有選取時，把「跟這個人有關的」與「其他人的」分開處理。
+
+        關鍵是**壓暗其餘**而不只是點亮相關的：七十人的網有數百條線，
+        單純把幾條加亮，在那片密度裡幾乎看不出來。把背景退到幾乎不可見，
+        那幾條才會浮出來。
+
+        neighbours 順便收集起來——被選中的人連到誰，也要一起標示。
+      */
+      const selectedId = selectedRef.current;
+      const neighbours = new Set<string>();
+      if (selectedId) {
+        for (const link of links) {
+          if (link.a.node.id === selectedId) neighbours.add(link.b.node.id);
+          else if (link.b.node.id === selectedId) neighbours.add(link.a.node.id);
+        }
+      }
+
       for (const link of links) {
         if (link.glow > 0) link.glow = Math.max(0, link.glow - dt / RIPPLE_S);
         const hot = link.glow > 0;
-        const color = hot ? FLARE : NEON;
+        const related =
+          selectedId !== null &&
+          (link.a.node.id === selectedId || link.b.node.id === selectedId);
+        // 有選取但這條無關 → 退到背景
+        const muted = selectedId !== null && !related;
+        const color = hot ? FLARE : related ? MOON : NEON;
         ctx!.save();
         /*
           靜止的線是實線，不跑虛線流動。
@@ -661,8 +783,15 @@ export function WarRoomScene({
           ctx!.shadowColor = color;
           ctx!.shadowBlur = 10;
         }
-        ctx!.strokeStyle = rgba(color, hot ? 0.25 + link.glow * 0.6 : 0.2);
-        ctx!.lineWidth = hot ? 1.8 : 1;
+        if (related) {
+          ctx!.shadowColor = MOON;
+          ctx!.shadowBlur = 12;
+        }
+        ctx!.strokeStyle = rgba(
+          color,
+          hot ? 0.25 + link.glow * 0.6 : related ? 0.85 : muted ? 0.04 : 0.2,
+        );
+        ctx!.lineWidth = hot ? 1.8 : related ? 2 : 1;
         ctx!.beginPath();
         ctx!.moveTo(link.pts[0].x, link.pts[0].y);
         for (const p of link.pts) ctx!.lineTo(p.x, p.y);
@@ -722,15 +851,32 @@ export function WarRoomScene({
           if (p.burst.t >= p.burst.life) p.burst = null;
         }
 
-        drawNode(p);
+        const focus: "selected" | "linked" | "muted" | null =
+          selectedId === null
+            ? null
+            : p.node.id === selectedId
+              ? "selected"
+              : neighbours.has(p.node.id)
+                ? "linked"
+                : "muted";
+        drawNode(p, focus);
 
         ctx!.save();
-        ctx!.font = '12px "Microsoft JhengHei", "PingFang TC", sans-serif';
+        // 被選中的名字放大加粗——那是這時候唯一該讀的字。
+        ctx!.font =
+          focus === "selected"
+            ? 'bold 14px "Microsoft JhengHei", "PingFang TC", sans-serif'
+            : '12px "Microsoft JhengHei", "PingFang TC", sans-serif';
         ctx!.textAlign = "center";
+        ctx!.globalAlpha = focus === "muted" ? 0.25 : 1;
         ctx!.fillStyle =
-          p.ripple > 0 || p.burst ? "#ffffff" : "rgba(170,205,235,.85)";
-        ctx!.shadowColor = p.burst ? MOON : p.color;
-        ctx!.shadowBlur = p.ripple > 0 || p.burst ? 12 : 5;
+          focus === "selected"
+            ? MOON
+            : p.ripple > 0 || p.burst
+              ? "#ffffff"
+              : "rgba(170,205,235,.85)";
+        ctx!.shadowColor = focus === "selected" ? MOON : p.burst ? MOON : p.color;
+        ctx!.shadowBlur = focus === "selected" || p.ripple > 0 || p.burst ? 12 : 5;
         ctx!.fillText(p.node.nickname, p.x, p.y + p.r + 14);
         ctx!.restore();
       }

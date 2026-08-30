@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_TC, Silkscreen } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 // 由 Next 自行託管字型檔，不在執行期打外部請求——
@@ -50,7 +52,20 @@ export default function RootLayout({
       lang="zh-Hant"
       className={`${notoSansTC.variable} ${silkscreen.variable}`}
     >
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        {/*
+          兩者都只在 Vercel 上實際運作，本機開發時不會送出任何請求。
+
+          Analytics 記錄的是瀏覽量；SpeedInsights 記錄的是真實使用者的
+          載入耗時（LCP、TTFB 等）。要判斷「現場到底慢在哪」看的是後者——
+          它會告訴你慢的是伺服器回應還是前端渲染，那是兩種完全不同的修法。
+
+          放在 children 之後：它們不影響版面，晚一點掛載也不會擋到內容。
+        */}
+        <Analytics />
+        <SpeedInsights />
+      </body>
     </html>
   );
 }

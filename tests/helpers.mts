@@ -14,7 +14,8 @@ assertTestDatabase("測試");
  */
 export const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000";
 
-const prisma = new PrismaClient({
+/** 測試直接讀寫資料庫時共用這一個，避免每個測試檔各開一組連線。 */
+export const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 

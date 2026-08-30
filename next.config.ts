@@ -2,14 +2,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /*
-    產生 .next/standalone —— 一份自帶相依的最小執行包。
+    只有建 Docker 映像時才產生 standalone 輸出。
 
-    Docker 部署（見 GCP/）需要它：沒有的話映像得整包 node_modules，
-    體積大好幾倍，而 Cloud Run 每次冷啟動都要拉那個映像。
+    standalone 是一份自帶相依的最小執行包，Cloud Run 需要它——沒有的話
+    映像得整包 node_modules，體積大好幾倍，而每次冷啟動都要拉那個映像。
 
-    Vercel 會忽略這個設定，所以兩邊可以共用同一份設定檔。
+    **但不能一律開啟。** Vercel 有自己的檔案追蹤流程，兩者會衝突，
+    症狀是建置到最後才失敗：
+
+        ENOENT: no such file or directory, open '.next/next-server.js.nft.json'
+
+    所以改成由 GCP/Dockerfile 明確設定 BUILD_STANDALONE=1 才啟用。
+    Vercel 與本機的一般建置都不受影響。
   */
-  output: "standalone",
+  output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
   // 實機測試相機需要 HTTPS 通道（cloudflared / ngrok）——見 ADR-0004。
   // 通道網域需列入此處，否則 Next 的開發模式會拒絕跨來源請求。
   allowedDevOrigins: [

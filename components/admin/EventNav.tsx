@@ -34,7 +34,7 @@ export function EventNav({
               key={item.key}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`tap-target flex flex-col rounded-lg border-2 px-3 py-2 transition-colors ${
+              className={`tap-target flex flex-col items-start rounded-lg border-2 px-3 py-2 transition-colors ${
                 active
                   ? "border-neon bg-neon/10"
                   : alert

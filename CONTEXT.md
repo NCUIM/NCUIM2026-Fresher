@@ -59,9 +59,9 @@ _Avoid_: 好友清單, 通訊錄
 一位 Participant 針對另一位已收集的 Participant 所寫的 50 字以內短評，描述對方的特質與自己的想法。必定具名，且只有**收件人與 Admin** 看得到。每一組收集關係至多一則，可修改。
 _Avoid_: 留言, 評論, 回饋, 悄悄話
 
-**Impression Wall（漂浮牆）**:
-一位 Participant 收到的所有 Impression 的動態漂浮展示頁面。僅本人與 Admin 可見。收件人可隱藏個別 Impression，隱藏時可一併回報給 Admin。
-_Avoid_: 留言板, 塗鴉牆
+**Impression Wall（浮光牆）**:
+一位 Participant 收到的所有 Impression 的動態展示頁面。每一則以直排字柱的形式分層等速流過，可拖住留置閱讀。僅本人與 Admin 可見。收件人可隱藏個別 Impression，隱藏時可一併回報給 Admin。
+_Avoid_: 留言板, 塗鴉牆, 漂浮牆（舊名）
 
 **Showcase（九宮格）**:
 Participant 從自己收集到的 Card 中挑選至多九張的展示格，公開可瀏覽。放入 Showcase 的對象，其 Impression 會在該收件人的 Impression Wall 上以更顯眼的方式呈現。系統不提供「我被幾個人放入 Showcase」的反向查詢。
@@ -88,3 +88,7 @@ _Avoid_: 點數, 積分, 經驗值
 **Leaderboard（排行榜）**:
 單一 Event 內依 Score 排序的 Participant 名次，對 Participant 可見。排序依據是 Score，不是 Collection 或 Scan 的數量。僅有個人排名，不設團體排名——Team 只影響 Achievement 的達成與否。
 _Avoid_: 排名表, 榜單
+
+**War Room（戰情室）**:
+單一 Event 的即時全景，僅 Admin 可見，設計給筆電或投影幕而非手機。以節點呈現每位 Participant（大小取決於 Score），以連線呈現每一次相遇（一次 Scan 的雙向 Collection），並即時列出掃描與 Achievement 的動態與完整排名。它只是既有資料的另一種呈現，本身不新增任何領域概念，也不會揭露隱藏 Achievement 的名稱。
+_Avoid_: 儀表板, 監控台, 大螢幕

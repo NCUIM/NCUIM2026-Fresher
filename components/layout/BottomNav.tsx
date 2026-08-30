@@ -25,7 +25,7 @@ type NavItem = {
  * 成就與排行榜移到 /me 的次要入口。
  *
  * 最後兩項是同一個機制的兩面：「寫短評」是我寫給別人的（所以有待辦徽章），
- * 「漂浮牆」是別人寫給我的。
+ * 「浮光牆」是別人寫給我的。
  */
 export function BottomNav({
   pendingImpressions = 0,
@@ -43,7 +43,7 @@ export function BottomNav({
     { href: "/code", label: "QRCode", icon: "▣" },
     { href: "/scan", label: "掃描", icon: "◎", primary: true },
     { href: "/write", label: "寫短評", icon: "✎", badge: pendingImpressions },
-    { href: "/wall", label: "漂浮牆", icon: "✉" },
+    { href: "/wall", label: "浮光牆", icon: "✉" },
   ];
 
   return (

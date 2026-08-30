@@ -5,7 +5,7 @@ import { getReceivedImpressions } from "@/lib/wall";
 import { getShowcase } from "@/lib/showcase";
 
 /**
- * 一位參與者的漂浮牆與九宮格，供 Admin 審核。
+ * 一位參與者的浮光牆與九宮格，供 Admin 審核。
  *
  * 這不是新的權限：CONTEXT.md 早就寫明 Impression「只有收件人與 Admin
  * 看得到」、Wall「僅本人與 Admin 可見」，隱藏功能也明定「隱藏只影響

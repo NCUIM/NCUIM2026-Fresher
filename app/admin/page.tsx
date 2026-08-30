@@ -56,7 +56,7 @@ export default async function AdminPage() {
 
       <Link
         href="/admin/events"
-        className="tap-target glow-neon flex flex-col rounded-xl border border-neon/50 bg-neon/10 px-4 py-3"
+        className="tap-target glow-neon flex flex-col items-start rounded-xl border border-neon/50 bg-neon/10 px-4 py-3"
       >
         <span className="font-bold text-neon">活動管理</span>
         <span className="text-xs text-dim">

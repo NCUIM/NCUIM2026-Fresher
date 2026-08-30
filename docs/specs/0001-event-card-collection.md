@@ -109,11 +109,11 @@ Admin 在後台即時掌握所有人的狀況，能發布公告、調整成就�
 67. As a 參與者, I want 我寫的內容只有收件人看得到, so that 我能寫得真誠而不必擔心被公開評論
 68. As a 參與者, I want 只能對已收集的人撰寫短評, so that 沒有互動過的人無法對我留言
 
-### 漂浮牆
+### 浮光牆
 
 69. As a 參與者, I want 一個動態漂浮展示所有收到短評的頁面, so that 回顧是一種享受而不只是讀清單
 70. As a 參與者, I want 把我放進九宮格的人所寫的短評更顯眼, so that 我知道哪些人特別重視這段關係
-71. As a 參與者, I want 我的漂浮牆只有我自己看得到, so that 我不會被拿來比較收到幾則
+71. As a 參與者, I want 我的浮光牆只有我自己看得到, so that 我不會被拿來比較收到幾則
 72. As a 參與者, I want 隱藏讓我不舒服的短評, so that 我不必一直看到它
 73. As a 參與者, I want 隱藏時可一併回報給主辦方, so that 我不需要當面去找工作人員申訴
 74. As a 參與者, I want 看到這些內容的刪除日期, so that 我能決定要不要截圖保存
@@ -225,7 +225,7 @@ Admin 在後台即時掌握所有人的狀況，能發布公告、調整成就�
 - Admin 可手動調整個別 Participant 的 Team；該 Participant 已累積的分數隨之移動。
 - 隊員清單對 Participant **只回傳進度數字，不回傳成員身分**。
 
-### Impression、Showcase 與漂浮牆
+### Impression、Showcase 與浮光牆
 
 - Impression 限 50 字，一組收集關係至多一則，可修改。撰寫前提是已收集該對象。
 - **Impression 一律具名，且僅收件人與 Admin 可讀**（ADR-0003）。書寫者送出後不得得知對方是否讀過或隱藏。

@@ -67,6 +67,23 @@ export default async function EventsPage() {
         </p>
       </header>
 
+      {/*
+        戰情室放在最上面。它是活動當天唯一會「一直開著」的畫面——
+        其餘功能都是進去做完一件事就離開。
+      */}
+      <Link
+        href="/admin/events/warroom"
+        className="tap-target glow-neon flex items-center justify-between rounded-xl border-2 border-neon/60 bg-neon/10 px-4 py-3.5 transition-colors hover:bg-neon/20"
+      >
+        <span className="flex flex-col">
+          <span className="font-bold text-neon">活動戰情室</span>
+          <span className="text-xs text-dim">
+            即時連線圖・掃描與成就動態・完整排名（建議用電腦或投影幕）
+          </span>
+        </span>
+        <span className="px shrink-0 text-neon">▶</span>
+      </Link>
+
       {isSuper ? (
         <EventOverview
           initial={events.map((e) => ({
@@ -87,7 +104,7 @@ export default async function EventsPage() {
             <li key={e.id}>
               <Link
                 href={`/admin/events/${e.id}`}
-                className="tap-target flex flex-col rounded-xl border border-line px-4 py-3 transition-colors hover:border-neon/50"
+                className="tap-target flex flex-col items-start rounded-xl border border-line px-4 py-3 transition-colors hover:border-neon/50"
               >
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-bold">{e.name}</span>

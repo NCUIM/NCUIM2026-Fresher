@@ -172,7 +172,7 @@ expect("排行榜有內容", names.length > 0);
 expect("工作人員不在榜上", !names.some((n: string) => n.startsWith("幹部")));
 expect("回傳自己的名次", board.body.me !== null);
 
-step("⑤ 漂浮牆與九宮格");
+step("⑤ 浮光牆與九宮格");
 const wall = await GET("/api/impressions/received", freshmen[0].cookie);
 expect(`新生01 收到 ${wall.body.impressions.length} 則短評`, wall.body.impressions.length > 0);
 expect(
@@ -283,7 +283,7 @@ const viewAfter = await GET("/api/me", freshmen[0].cookie);
 expect("封存後仍看得到收集成果", viewAfter.status === 200 && viewAfter.body.score.total > 0);
 
 const wallAfterArchive = await GET("/api/impressions/received", freshmen[0].cookie);
-expect("封存後漂浮牆仍可查看", wallAfterArchive.body.impressions.length > 0);
+expect("封存後浮光牆仍可查看", wallAfterArchive.body.impressions.length > 0);
 
 const days =
   (new Date(archive.body.purgeAfter).getTime() -

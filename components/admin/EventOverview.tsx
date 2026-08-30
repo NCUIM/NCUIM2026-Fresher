@@ -206,7 +206,7 @@ export function EventOverview({
                 */}
                 <Link
                   href={`/admin/events/${e.id}`}
-                  className="rounded-lg border border-neon px-3 py-1.5 text-xs font-bold text-neon transition-colors hover:bg-neon hover:text-void"
+                  className="tap-target rounded-lg border border-neon px-3 py-1.5 text-xs font-bold text-neon transition-colors hover:bg-neon hover:text-void"
                 >
                   進入後台
                 </Link>
@@ -219,7 +219,7 @@ export function EventOverview({
                 <button
                   onClick={() => toggleArchive(e)}
                   disabled={busy}
-                  className="rounded-lg border border-moon/60 px-3 py-1.5 text-xs text-moon transition-colors hover:bg-moon/10 disabled:opacity-50"
+                  className="tap-target rounded-lg border border-moon/60 px-3 py-1.5 text-xs text-moon transition-colors hover:bg-moon/10 disabled:opacity-50"
                 >
                   {e.status === "ACTIVE" ? "封存" : "重新開放"}
                 </button>
@@ -232,7 +232,7 @@ export function EventOverview({
                   <button
                     onClick={() => remove(e)}
                     disabled={busy}
-                    className="rounded-lg border border-flare/60 px-3 py-1.5 text-xs text-flare transition-colors hover:bg-flare/10 disabled:opacity-50"
+                    className="tap-target rounded-lg border border-flare/60 px-3 py-1.5 text-xs text-flare transition-colors hover:bg-flare/10 disabled:opacity-50"
                   >
                     刪除
                   </button>
@@ -410,13 +410,13 @@ function HostPicker({
         <button
           onClick={() => onSave(ids)}
           disabled={busy}
-          className="rounded-sm bg-neon px-3 py-1.5 text-xs font-bold text-void disabled:bg-line"
+          className="tap-target rounded-sm bg-neon px-3 py-1.5 text-xs font-bold text-void disabled:bg-line"
         >
           儲存指派
         </button>
         <button
           onClick={onCancel}
-          className="rounded-sm border border-line px-3 py-1.5 text-xs text-dim"
+          className="tap-target rounded-sm border border-line px-3 py-1.5 text-xs text-dim"
         >
           取消
         </button>

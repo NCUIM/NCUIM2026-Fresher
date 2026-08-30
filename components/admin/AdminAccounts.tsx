@@ -192,7 +192,7 @@ export function AdminAccounts({
             {a.id !== currentId && (
               <button
                 onClick={() => removeAdmin(a)}
-                className="rounded-sm border border-flare/50 px-3 py-1.5 text-xs text-flare"
+                className="tap-target rounded-sm border border-flare/50 px-3 py-1.5 text-xs text-flare"
               >
                 移除
               </button>

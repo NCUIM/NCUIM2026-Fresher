@@ -100,7 +100,7 @@ export function EventMenu({
                     href={item.href}
                     onClick={() => setOpen(false)}
                     aria-current={active ? "page" : undefined}
-                    className={`tap-target flex flex-col rounded-lg border px-3 py-2.5 transition-colors ${
+                    className={`tap-target flex flex-col items-start rounded-lg border px-3 py-2.5 transition-colors ${
                       active
                         ? "border-neon bg-neon/10"
                         : alert

@@ -506,7 +506,7 @@ export function AdminDashboard({
                       className="rounded-lg border border-line px-3 py-2"
                     >
                       <summary className="cursor-pointer text-xs text-dim">
-                        查看漂浮牆與九宮格
+                        查看浮光牆與九宮格
                       </summary>
                       <div className="mt-2">
                         {openDetail === p.id && (

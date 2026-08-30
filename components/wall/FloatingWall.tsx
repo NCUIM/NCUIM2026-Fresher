@@ -6,9 +6,9 @@ import type { WallImpression } from "@/lib/wall";
 /**
  * 由 id 推導出穩定的偽亂數。
  *
- * 位置要看起來隨機，但**不能每次重新整理就跳到別的地方**——這面牆是
- * 使用者會反覆回來看的東西，每次排版都不同就認不出「那一則在哪」。
- * 用 id 當種子，同一則永遠落在同一處，不同則之間則毫無規律。
+ * 每一則落在哪一層、從哪個高度飄過，都不能每次重新整理就換一套——
+ * 這面牆是使用者會反覆回來看的東西，認得出「那一句在最前面那層」
+ * 才有連續感。用 id 當種子，同一則永遠是同一個樣子。
  */
 function seeded(id: string, salt: number): number {
   let h = 2166136261 ^ salt;
@@ -25,22 +25,89 @@ const SPARK_COUNT = 10;
 /** 卡片放大到彈窗出現之間的間隔，讓放大這件事被看見。 */
 const POP_DELAY_MS = 260;
 
+/** 拖住之後停留多久自動放回流中。 */
+const STAY_MS = 15000;
+
+/** 超過這個位移才算拖曳；之內都算點擊。 */
+const DRAG_THRESHOLD_PX = 8;
+
 /**
- * 漂浮呈現。
+ * 景深分層。
  *
- * 動畫一律用 transform 與 opacity，不動 top/left——後者會觸發版面重排，
- * 在同時有數十張卡片漂浮時會讓手機明顯掉幀。
+ * 近的一層大、清晰、不透明，而且**跑得快**；遠的一層小、模糊、淡，跑得慢。
+ * 這個對應關係不能反——近快遠慢是視差的全部內容，反過來會讓整面牆看起來
+ * 像在往後倒。
  *
- * 尊重 prefers-reduced-motion：對前庭功能敏感的人，滿版緩慢漂移的內容
- * 可能引發不適，因此在該設定下改為靜態排列（見 globals.css）。
+ * speed 是相對倍率而不是秒數：實際時長要由則數推導（見 flowDuration）。
+ */
+const LAYERS = [
+  { size: 22, opacity: 1, blur: 0, heightPct: 88, speed: 0.75 },
+  { size: 17, opacity: 0.78, blur: 0.4, heightPct: 72, speed: 1 },
+  { size: 14, opacity: 0.6, blur: 0.9, heightPct: 56, speed: 1.4 },
+];
+
+/** 目標節奏：整面牆平均每這麼久就有一根新的字柱進場。 */
+const APPEAR_EVERY_S = 1;
+
+/*
+  單根字柱飛完一趟的上下限。
+
+  下限保護可讀性——一趟 200cqw 裡只有一半在視野內，時長 16 秒代表
+  一根字柱在畫面上停留約 8 秒，那是讀完一句 50 字的下限。
+  上限保護節奏：則數很多時不能讓一輪拖成兩分鐘。
+*/
+const MIN_FLOW_S = 16;
+const MAX_FLOW_S = 75;
+
+/**
+ * 由則數推導某一層的一輪時長。
+ *
+ * 同一層的每一根平均分佈在一輪裡，所以「一層每隔多久出現一根」＝
+ * 時長÷該層則數。三層加起來要達到每秒一根，就讓每一層的時長都與
+ * **總則數**成正比——各層則數大致均分，相加後的進場頻率自然回到
+ * 每秒一根，而各層之間仍然靠 speed 倍率保有速度差。
+ */
+function flowDuration(total: number, speed: number): number {
+  const ideal = total * APPEAR_EVERY_S * speed;
+  return Math.min(MAX_FLOW_S, Math.max(MIN_FLOW_S, ideal));
+}
+
+/** 滑鼠視差的最大位移。再大就會讓字柱飄出容器邊緣。 */
+const PARALLAX_X = 22;
+const PARALLAX_Y = 14;
+
+type Pinned = { x: number; y: number };
+
+/**
+ * 浮光牆。
+ *
+ * 每一則短評是一根直排的字柱，從右緣外等速流進來、左緣外流出去，
+ * 分三層景深疊著跑。拖住一根會停在原地十五秒（右側有一條倒數線），
+ * 時間到就從當下的位置接回流中；點一下則打開內容，可以隱藏或回報。
+ *
+ * 為什麼不是靜態的清單：這些話是別人在活動當下寫給你的，散落在時間裡
+ * 被你陸續收到。整齊排成一列會把它們變成一份清單；讓它們各自流過，
+ * 才像那天現場的樣子。
+ *
+ * 尊重 prefers-reduced-motion：橫向流過的直排文字對前庭功能敏感的人
+ * 最不友善，在該設定下改為靜態的橫向清單（見 globals.css），內容一字不少。
  */
 export function FloatingWall({
   impressions,
   purgeDate,
   readOnly = false,
+  fill = false,
 }: {
   impressions: WallImpression[];
   purgeDate: string | null;
+  /*
+    滿版：整個視窗就是這面牆，只讓開底部導覽列。
+
+    字柱要有足夠的橫向距離才看得出「流過」；擠在一個小方框裡，一根
+    從進場到離場只有兩三秒，那是閃過不是流動。參與者頁用滿版，後台
+    的彈窗維持有框的尺寸——那裡本來就是在一個框裡審核。
+  */
+  fill?: boolean;
   /*
     後台檢視用。呈現與本人看到的完全一致——審核時看到的必須是本人
     看到的那一份，不然「有問題的內容」與「被回報的內容」對不起來。
@@ -57,40 +124,197 @@ export function FloatingWall({
   // 檢舉要二次確認：它會驚動主辦方，而且送出後不能撤回。
   const [confirmingReport, setConfirmingReport] = useState(false);
 
-  // 正在被點開的那一則：放大並提到最上層，火花從它中心炸開。
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [spark, setSpark] = useState<{ x: number; y: number; key: number } | null>(
     null,
   );
+
+  /** 被拖住的字柱：id → 相對於視差層的位置。 */
+  const [pinned, setPinned] = useState<Record<string, Pinned>>({});
+  /** 正在倒數的字柱：id → 一個換就會讓倒數線重新掛載的序號。 */
+  const [counting, setCounting] = useState<Record<string, number>>({});
+  /** 放回流中後的動畫相位，讓它從被放下的位置接著跑，而不是跳回原位。 */
+  const [resumed, setResumed] = useState<Record<string, number>>({});
+
+  const driftRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    baseX: number;
+    baseY: number;
+    moved: boolean;
+  } | null>(null);
+  const stayTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // release 會在 setTimeout 裡跑，閉包抓到的是舊的 pinned。用 ref 讀最新值。
+  const pinnedRef = useRef(pinned);
+  pinnedRef.current = pinned;
 
   // 元件卸載時清掉待觸發的計時器，否則會在已卸載的元件上 setState。
-  useEffect(
-    () => () => {
-      timers.current.forEach(clearTimeout);
-      timers.current = [];
-    },
-    [],
-  );
+  useEffect(() => {
+    const pending = timers.current;
+    const stays = stayTimers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      Object.values(stays).forEach(clearTimeout);
+    };
+  }, []);
 
-  /** 點一張卡片：先放大＋火花，再開內容。 */
-  function activate(item: WallImpression, e: React.MouseEvent<HTMLElement>) {
-    const r = e.currentTarget.getBoundingClientRect();
-    setActiveId(item.id);
+  /*
+    滑鼠視差。只在有精確指標的裝置上跑——觸控裝置沒有「游標位置」，
+    掛上去只會是一個永遠不動的 rAF 迴圈。拖曳中凍結，否則手指按著
+    字柱不動，字柱卻因為視差在飄，會覺得抓不住。
+  */
+  useEffect(() => {
+    const el = driftRef.current;
+    if (!el) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let targetX = 0;
+    let targetY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let frame = 0;
+
+    function onMove(e: PointerEvent) {
+      const box = el!.getBoundingClientRect();
+      targetX = ((e.clientX - box.left) / box.width - 0.5) * -PARALLAX_X;
+      targetY = ((e.clientY - box.top) / box.height - 0.5) * -PARALLAX_Y;
+    }
+
+    function loop() {
+      if (!dragRef.current) {
+        currentX += (targetX - currentX) * 0.05;
+        currentY += (targetY - currentY) * 0.05;
+        el!.style.transform = `translate(${currentX.toFixed(1)}px, ${currentY.toFixed(1)}px)`;
+      }
+      frame = requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    frame = requestAnimationFrame(loop);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  /** 打開一則的內容：先放火花，再開彈窗。 */
+  function openSheet(id: string, center: { x: number; y: number }) {
     setSpark({
-      x: r.left + r.width / 2,
-      y: r.top + r.height / 2,
-      // key 讓同一張卡片連按兩次也會重播動畫——沒有它，React 會沿用
-      // 同一個節點，動畫不會重新開始。
+      x: center.x,
+      y: center.y,
+      // key 讓同一根連按兩次也會重播動畫——沒有它，React 會沿用同一個
+      // 節點，動畫不會重新開始。
       key: Date.now(),
     });
     timers.current.push(
       setTimeout(() => {
-        setSelectedId(item.id);
-        setActiveId(null);
+        setSelectedId(id);
         setSpark(null);
       }, POP_DELAY_MS),
     );
+  }
+
+  function stopStay(id: string) {
+    clearTimeout(stayTimers.current[id]);
+    delete stayTimers.current[id];
+    setCounting((c) => {
+      if (!(id in c)) return c;
+      const next = { ...c };
+      delete next[id];
+      return next;
+    });
+  }
+
+  /** 放手後開始倒數，時間到自動放回流中。 */
+  function startStay(id: string) {
+    clearTimeout(stayTimers.current[id]);
+    setCounting((c) => ({ ...c, [id]: Date.now() }));
+    stayTimers.current[id] = setTimeout(() => release(id), STAY_MS);
+  }
+
+  /**
+   * 放回流中，從當下的位置接著跑。
+   *
+   * 直接拿掉 pinned 的話，字柱會瞬移回它「本來應該在」的相位——那個
+   * 跳動會把留置這件事的手感整個破壞掉。所以先由當下的 x 反推流動
+   * 進行到幾成，再用負的 animation-delay 讓它從那一刻接上。
+   */
+  function release(id: string) {
+    stopStay(id);
+    const el = driftRef.current;
+    const spot = pinnedRef.current[id];
+    if (el && spot) {
+      const width = el.getBoundingClientRect().width;
+      if (width > 0) {
+        // 相位 p 時 translateX = width - 2 * width * p，故 p = (width - x) / 2width。
+        const progress = Math.min(Math.max((width - spot.x) / (2 * width), 0), 1);
+        setResumed((r) => ({ ...r, [id]: progress }));
+      }
+    }
+    setPinned((p) => {
+      const next = { ...p };
+      delete next[id];
+      return next;
+    });
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLButtonElement>, id: string) {
+    const el = driftRef.current;
+    if (!el) return;
+    // 按下就先停住：這樣拖曳不會有「先跑掉一小段再被抓住」的落差，
+    // 而點擊時彈窗馬上蓋上來，停住這件事根本看不見。
+    const box = el.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spot = { x: rect.left - box.left, y: rect.top - box.top };
+
+    stopStay(id);
+    setPinned((p) => ({ ...p, [id]: spot }));
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      id,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      baseX: spot.x,
+      baseY: spot.y,
+      moved: false,
+    };
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    drag.moved = true;
+    setPinned((p) => ({
+      ...p,
+      [drag.id]: { x: drag.baseX + dx, y: drag.baseY + dy },
+    }));
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    dragRef.current = null;
+
+    if (drag.moved) {
+      startStay(drag.id);
+      return;
+    }
+
+    // 沒移動就是點擊：放回流中，並打開內容。
+    const rect = e.currentTarget.getBoundingClientRect();
+    release(drag.id);
+    openSheet(drag.id, {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    });
   }
 
   // 從 items 找而不是存整個物件，這樣切換隱藏後彈窗內容會跟著更新。
@@ -98,6 +322,26 @@ export function FloatingWall({
   // 唯讀時不濾掉隱藏的：對審核者而言，那些正是最需要看見的內容。
   const visible = readOnly ? items : items.filter((i) => !i.hidden);
   const hiddenOnes = readOnly ? [] : items.filter((i) => i.hidden);
+
+  /*
+    分層與同層內的排隊順序都取自 **全部** 內容，而不是 visible。
+
+    同一層的字柱靠平均分配的負延遲彼此錯開，永遠不會疊在一起。若用
+    visible 來分配，隱藏一則會讓同層其餘每一根重新排隊，整面牆瞬間
+    洗牌；用全集分配，被隱藏的那一根留下一段空檔，其餘照舊。
+  */
+  const layerOf = new Map<string, number>();
+  const slotOf = new Map<string, number>();
+  const layerSize = LAYERS.map(() => 0);
+  for (const item of items) {
+    const layer = Math.min(
+      LAYERS.length - 1,
+      Math.floor(seeded(item.id, 10) * LAYERS.length),
+    );
+    layerOf.set(item.id, layer);
+    slotOf.set(item.id, layerSize[layer]);
+    layerSize[layer] += 1;
+  }
 
   function patch(id: string, change: Partial<WallImpression>) {
     setItems((list) => list.map((i) => (i.id === id ? { ...i, ...change } : i)));
@@ -166,7 +410,11 @@ export function FloatingWall({
   return (
     <>
       {/* 夜空當底，右上角一道琥珀月光 */}
-      <div className="wall-field relative flex-1 overflow-hidden rounded-xl border border-line bg-void">
+      <div
+        className={`wall-field bg-void ${
+          fill ? "wall-field-fill" : "rounded-xl border border-line"
+        }`}
+      >
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
@@ -181,85 +429,183 @@ export function FloatingWall({
             這面牆上的內容都被你隱藏了。
           </p>
         ) : (
-          visible.map((item) => (
-            <button
-              key={item.id}
-              onClick={(e) => activate(item, e)}
-              className={`wall-card absolute max-w-[72%] rounded-lg px-3 py-2 text-left ${
-                // 被點開的那一則提到最上層並放大，其餘維持原本的層級。
-                activeId === item.id
-                  ? "wall-card-active z-40 border-2 border-neon bg-void text-chalk shadow-[0_0_28px_rgba(44,232,181,0.5)]"
-                  : // 唯讀檢視下，被回報的最顯眼，其次是被隱藏的——
-                    // 那個排序就是審核時該處理的順序。
-                    readOnly && item.reported
-                    ? "z-20 border border-flare bg-flare/15 text-flare"
-                    : readOnly && item.hidden
-                      ? "z-10 border border-moon/60 bg-moon/10 text-moon"
-                      : item.featured
-                        ? "z-10 border border-moon bg-void text-moon shadow-[0_0_14px_rgba(255,206,92,0.22)]"
-                        : "border border-line bg-slate text-dim"
-              }`}
-              style={
-                {
-                  /*
-                    位置與節奏由 id 推導，看起來隨機但每次都落在同一處——
-                    這面牆是會反覆回來看的東西，每次重排就認不出哪則是哪則。
-                  */
-                  left: `${4 + seeded(item.id, 1) * 56}%`,
-                  top: `${4 + seeded(item.id, 2) * 76}%`,
-                  "--drift-delay": `${-seeded(item.id, 3) * 8}s`,
-                  "--drift-duration": `${7 + seeded(item.id, 4) * 7}s`,
-                  // 方向與幅度都各自不同，否則整面牆會像一塊布一起平移。
-                  "--drift-x": `${(seeded(item.id, 5) - 0.5) * 26}%`,
-                  "--drift-y": `${(seeded(item.id, 6) - 0.5) * 26}%`,
-                  "--drift-rot": `${(seeded(item.id, 7) - 0.5) * 8}deg`,
-                } as React.CSSProperties
-              }
-            >
-              <p className="text-xs leading-snug break-words">{item.text}</p>
-              <p
-                className={`mt-1 text-[10px] ${item.featured ? "text-moon/70" : "text-faint"}`}
-              >
-                — {item.authorNickname}
-                {item.featured && " ★"}
-                {readOnly && item.reported && " ・已回報"}
-                {readOnly && item.hidden && " ・已隱藏"}
-              </p>
-            </button>
-          ))
+          <div ref={driftRef} className="wall-drift-layer">
+            {visible.map((item) => {
+              const layerIndex = layerOf.get(item.id) ?? 0;
+              const layer = LAYERS[layerIndex];
+              const slot = slotOf.get(item.id) ?? 0;
+              const total = Math.max(1, layerSize[layerIndex]);
+              const duration = flowDuration(items.length, layer.speed);
+              const spot = pinned[item.id];
+
+              /*
+                同層的每一根平均分配在一整輪裡。負的延遲代表「這一輪已經
+                跑掉的部分」，所以載入時它們就已經散在各處，而不是全部
+                擠在右緣外排隊等進場。
+              */
+              const progress = resumed[item.id] ?? slot / total;
+              const chars = Array.from(item.text);
+              // 長句不能讓最後一個字等太久，逐字的間隔隨字數縮短。
+              const charStep = Math.min(0.09, 2.2 / Math.max(1, chars.length));
+
+              const tone = item.featured
+                ? "text-moon"
+                : readOnly && item.reported
+                  ? "text-flare"
+                  : readOnly && item.hidden
+                    ? "text-dim"
+                    : "text-chalk";
+
+              /*
+                被拖住的那一根拿掉淡度與模糊，光暈也加強。
+
+                拖住的唯一目的就是把一句話停下來好好讀——留著景深的
+                模糊等於這個動作沒有生效。景深是給「還在流的」用的。
+              */
+              const held = Boolean(spot);
+
+              return (
+                <button
+                  key={item.id}
+                  onPointerDown={(e) => onPointerDown(e, item.id)}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                  aria-label={`${item.text} — ${item.authorNickname}`}
+                  className={`wall-col ${tone} ${spot ? "wall-col-pinned" : ""}`}
+                  style={
+                    {
+                      fontSize: `${layer.size}px`,
+                      height: `${layer.heightPct}%`,
+                      top: spot
+                        ? `${spot.y}px`
+                        : `${seeded(item.id, 11) * (100 - layer.heightPct)}%`,
+                      left: spot ? `${spot.x}px` : 0,
+                      opacity: held ? 1 : layer.opacity,
+                      filter: !held && layer.blur ? `blur(${layer.blur}px)` : undefined,
+                      textShadow: item.featured
+                        ? `0 0 ${held ? 22 : 16}px rgba(255,206,92,${held ? 0.7 : 0.45})`
+                        : `0 0 ${held ? 20 : 14}px rgba(160,190,255,${held ? 0.65 : 0.35})`,
+                      "--flow-duration": `${duration}s`,
+                      "--flow-delay": `${-progress * duration}s`,
+                      "--sway-duration": `${4 + seeded(item.id, 12) * 3}s`,
+                      "--sway-from": `${-1.2 + seeded(item.id, 13)}deg`,
+                      "--sway-to": `${0.2 + seeded(item.id, 14) * 1.2}deg`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <span className="wall-sway" aria-hidden="true">
+                    {chars.map((ch, i) => (
+                      <span
+                        key={i}
+                        className="wall-ch"
+                        style={{ animationDelay: `${0.35 + i * charStep}s` }}
+                      >
+                        {ch}
+                      </span>
+                    ))}
+                    <span
+                      className="wall-ch opacity-60"
+                      style={{
+                        animationDelay: `${0.35 + chars.length * charStep}s`,
+                        fontSize: "0.75em",
+                      }}
+                    >
+                      　—{item.authorNickname}
+                      {readOnly && item.reported && "・已回報"}
+                      {readOnly && item.hidden && "・已隱藏"}
+                    </span>
+                  </span>
+
+                  {/*
+                    倒數線。key 一換就重新掛載，動畫因此從頭跑——
+                    再次拖住要重新計時，光換 class 是不會重播的。
+                  */}
+                  {counting[item.id] && (
+                    <span
+                      key={counting[item.id]}
+                      aria-hidden="true"
+                      className="wall-stayline"
+                      style={
+                        { "--stay-duration": `${STAY_MS}ms` } as React.CSSProperties
+                      }
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div aria-hidden="true" className="wall-vignette" />
+        {fill && (
+          <>
+            <div aria-hidden="true" className="wall-scrim wall-scrim-top" />
+            <div aria-hidden="true" className="wall-scrim wall-scrim-bottom" />
+          </>
         )}
       </div>
 
       {/*
-        隱藏的內容收在這裡而不是留在牆上。留在牆上（就算調淡）等於沒有隱藏；
-        但完全不列出來，「還原」就變成一個到不了的功能。
+        滿版時牆是 fixed 的，已經脫離版面流。其餘內容要自己建立堆疊
+        脈絡疊上去，否則會被牆蓋住——連「已隱藏」那份清單都點不到。
       */}
-      {hiddenOnes.length > 0 && (
-        <details className="rounded-xl border border-line surface px-4 py-3">
-          <summary className="cursor-pointer text-sm text-dim">
-            已隱藏（{hiddenOnes.length}）
-          </summary>
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {hiddenOnes.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => setSelectedId(item.id)}
-                  className="w-full rounded-lg border border-line px-3 py-2 text-left"
-                >
-                  <p className="truncate text-xs text-faint">{item.text}</p>
-                  <p className="mt-0.5 text-[10px] text-faint">
-                    — {item.authorNickname}
-                    {item.reported && " ・已回報"}
-                  </p>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      <div
+        className={
+          fill ? "relative z-10 mt-auto flex flex-col gap-4" : "contents"
+        }
+      >
+        {/* 說明文字不吃觸控，否則底部那一整條會擋住從那裡流過的字柱。 */}
+        <p className="pointer-events-none text-center text-[11px] text-faint">
+          點一下讀全文或隱藏 ｜ 拖住可留置 {STAY_MS / 1000} 秒
+        </p>
+
+        {/*
+          隱藏的內容收在這裡而不是留在牆上。留在牆上（就算調淡）等於沒有隱藏；
+          但完全不列出來，「還原」就變成一個到不了的功能。
+        */}
+        {hiddenOnes.length > 0 && (
+          <details className="rounded-xl border border-line surface px-4 py-3">
+            <summary className="cursor-pointer text-sm text-dim">
+              已隱藏（{hiddenOnes.length}）
+            </summary>
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {hiddenOnes.map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => setSelectedId(item.id)}
+                    className="w-full rounded-lg border border-line px-3 py-2 text-left"
+                  >
+                    <p className="truncate text-xs text-faint">{item.text}</p>
+                    <p className="mt-0.5 text-[10px] text-faint">
+                      — {item.authorNickname}
+                      {item.reported && " ・已回報"}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
+        {purgeDate && (
+          <p className="text-center text-[11px] text-faint">
+            這些內容將於 {purgeDate} 刪除，想留下請自行截圖
+          </p>
+        )}
+
+        {error && (
+          <p
+            role="alert"
+            className="rounded-lg bg-flare/15 px-3 py-2 text-sm text-flare"
+          >
+            {error}
+          </p>
+        )}
+      </div>
 
       {/*
-        點擊的火花。用 fixed 定位到被點的卡片中心，pointer-events:none
+        點擊的火花。用 fixed 定位到被點的字柱中心，pointer-events:none
         讓它不會擋住底下的東西——它純粹是回饋，不是可互動的元素。
       */}
       {spark && (
@@ -285,18 +631,6 @@ export function FloatingWall({
             );
           })}
         </div>
-      )}
-
-      {purgeDate && (
-        <p className="text-center text-[11px] text-faint">
-          這些內容將於 {purgeDate} 刪除，想留下請自行截圖
-        </p>
-      )}
-
-      {error && (
-        <p role="alert" className="rounded-lg bg-flare/15 px-3 py-2 text-sm text-flare">
-          {error}
-        </p>
       )}
 
       {selected && (
@@ -392,7 +726,7 @@ export function FloatingWall({
                     <span className="text-xs text-faint">
                       {selected.hidden
                         ? "只有你看不到，作者不會知道"
-                        : "關掉就不會出現在漂浮牆上"}
+                        : "關掉就不會出現在浮光牆上"}
                     </span>
                   </span>
                   <input

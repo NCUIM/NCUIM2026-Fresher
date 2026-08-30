@@ -25,10 +25,10 @@ type Opened = { id: string; nickname: string; view: "showcase" | "wall" };
  * 後台的完整排名。
  *
  * 與參與者端有兩個差別：不截斷（後台要掌握全場，不是保護最後一名的心情），
- * 而且每一列可以彈出那個人的九宮格與漂浮牆。
+ * 而且每一列可以彈出那個人的九宮格與浮光牆。
  *
  * 兩者分成獨立按鈕而不是一次全攤開：它們是不同的東西——九宮格是他選了誰，
- * 漂浮牆是別人怎麼說他——而且漂浮牆是私人內容，要看的人得明確按下去。
+ * 浮光牆是別人怎麼說他——而且浮光牆是私人內容，要看的人得明確按下去。
  */
 export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
   const [opened, setOpened] = useState<Opened | null>(null);
@@ -117,7 +117,7 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                 }
                 className="tap-target flex-1 rounded-lg border-2 border-line px-3 py-1.5 text-xs font-medium transition-colors hover:border-neon hover:bg-neon/10 hover:text-neon"
               >
-                漂浮牆
+                浮光牆
               </button>
             </span>
           </li>
@@ -132,7 +132,7 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
           aria-modal="true"
         >
           <div
-            /* 漂浮牆需要空間才漂得起來，九宮格則是固定的三乘三。 */
+            /* 浮光牆需要空間才漂得起來，九宮格則是固定的三乘三。 */
             className={`card-pop w-full rounded-xl border border-line surface p-5 ${
               opened.view === "wall" ? "max-w-md" : "max-w-sm"
             }`}
@@ -141,7 +141,7 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
             <div className="flex items-baseline justify-between">
               <h3 className="font-bold">
                 {opened.nickname} 的
-                {opened.view === "showcase" ? "九宮格" : "漂浮牆"}
+                {opened.view === "showcase" ? "九宮格" : "浮光牆"}
               </h3>
               <button
                 onClick={() => setOpened(null)}
@@ -192,13 +192,11 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   「他說的那則」與「我看到的那則」就對不起來。
                   唯讀模式下隱藏的內容仍留在牆上並標示，那正是要看的東西。
                 */
-                <div className="flex min-h-[52dvh] flex-col gap-2">
-                  <FloatingWall
-                    impressions={detail.wall}
-                    purgeDate={null}
-                    readOnly
-                  />
-                </div>
+                <FloatingWall
+                  impressions={detail.wall}
+                  purgeDate={null}
+                  readOnly
+                />
               )}
             </div>
           </div>

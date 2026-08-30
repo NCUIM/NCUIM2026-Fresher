@@ -31,6 +31,7 @@ export default async function EventsPage() {
         teamCount: true,
         basePoints: true,
         leaderboardTopN: true,
+        publicLeaderboard: true,
         _count: {
           select: { participants: true, teams: true, achievements: true },
         },

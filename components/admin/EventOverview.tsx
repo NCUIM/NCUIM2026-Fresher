@@ -9,6 +9,7 @@ type EventRow = {
   name: string;
   status: string;
   startsAt: string;
+  publicLeaderboard: boolean;
   archivedAt: string | null;
   purgeAfter: string | null;
   teamCount: number;
@@ -22,6 +23,42 @@ type HostOption = { id: string; username: string };
 
 const field =
   "rounded-sm border border-line bg-void px-3 py-2 text-sm text-chalk placeholder:text-faint focus:border-neon focus:outline-none";
+
+/*
+  預設值取「下一個整點或半點」，而不是此刻。
+
+  活動不會在 14:37 開始。給一個已經對齊的時間，多數情況直接按下去就對了，
+  不用先把分鐘改掉——而「早鳥」這類限時成就正是從這個時間起算的。
+*/
+function nextHalfHour(): Date {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  d.setMinutes(d.getMinutes() > 30 ? 60 : 30);
+  return d;
+}
+
+/** 幾天後的某一個整點。給快捷鍵用。 */
+function atHour(daysAhead: number, hour: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  d.setHours(hour, 0, 0, 0);
+  return d;
+}
+
+/** 把選到的時間唸出來確認。datetime-local 的原生顯示看不出星期幾。 */
+function describeDate(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "時間格式不正確";
+  return d.toLocaleString("zh-TW", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
 
 /** datetime-local 需要 YYYY-MM-DDTHH:mm，且必須是本地時間而非 UTC。 */
 function toLocalInput(d: Date): string {
@@ -56,8 +93,9 @@ export function EventOverview({
   const [draft, setDraft] = useState({
     name: "",
     passcode: "",
-    startsAt: toLocalInput(new Date()),
+    startsAt: toLocalInput(nextHalfHour()),
     teamCount: 10,
+    publicLeaderboard: false,
     basePoints: 10,
     leaderboardTopN: 10,
   });
@@ -188,6 +226,12 @@ export function EventOverview({
                     已封存
                   </span>
                 )}
+                {/* 哪幾場是對外公開的，要在清單上就看得出來。 */}
+                {e.publicLeaderboard && (
+                  <span className="rounded-full border border-moon px-2 py-0.5 text-[10px] text-moon">
+                    排行榜公開
+                  </span>
+                )}
               </div>
 
               <p className="mt-1 text-xs text-dim">
@@ -294,8 +338,39 @@ export function EventOverview({
               type="datetime-local"
               value={draft.startsAt}
               onChange={(e) => setDraft({ ...draft, startsAt: e.target.value })}
+              /*
+                色彩配置告訴瀏覽器這是深色介面，原生的日曆圖示與彈出面板
+                才會跟著變深色。少了它，那個圖示在深色底上幾乎看不見。
+              */
+              style={{ colorScheme: "dark" }}
               className={field}
             />
+
+            {/*
+              快捷鍵。活動的開始時間幾乎都是「今天等一下」或「明天下午」，
+              用原生選擇器要點四五次才選得到同一個值。
+            */}
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {[
+                { label: "現在", at: () => new Date() },
+                { label: "今天 14:00", at: () => atHour(0, 14) },
+                { label: "明天 14:00", at: () => atHour(1, 14) },
+                { label: "明天 09:00", at: () => atHour(1, 9) },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() =>
+                    setDraft({ ...draft, startsAt: toLocalInput(preset.at()) })
+                  }
+                  className="tap-target rounded-sm border border-line px-2.5 text-xs text-dim transition-colors hover:border-neon hover:text-neon"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <span className="text-xs text-neon">{describeDate(draft.startsAt)}</span>
             <span className="text-xs text-faint">
               「早鳥」這類限時成就是從這個時間起算的。
             </span>
@@ -339,7 +414,31 @@ export function EventOverview({
               />
             </label>
           </div>
-          <span className="-mt-1 text-xs text-faint">
+
+          {/*
+            公開排行榜。預設關閉，而且把後果直接寫在旁邊——這個開關的
+            影響範圍是「全世界」，不該只用一個沒有說明的核取方塊帶過。
+          */}
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-line px-4 py-3">
+            <input
+              type="checkbox"
+              checked={draft.publicLeaderboard}
+              onChange={(e) =>
+                setDraft({ ...draft, publicLeaderboard: e.target.checked })
+              }
+              className="mt-0.5 size-5 shrink-0 accent-neon"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">開放站外讀取排行榜</span>
+              <span className="text-xs text-faint">
+                打開後任何人都能讀到這場的名次、暱稱與分數（不含真實姓名與
+                信箱），給系網或現場大螢幕嵌入用。封存後自動停止，
+                之後也可以隨時關掉。
+              </span>
+            </span>
+          </label>
+
+          <span className="text-xs text-faint">
             組數填 0 代表不分組。建立後會自動產生一般與工作人員兩組註冊碼、
             分組與預設成就。
           </span>

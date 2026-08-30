@@ -49,6 +49,13 @@ model Event {
   leaderboardTopN Int @default(10) // Q31：只公開前 N 名
   teamCount       Int @default(0) // 0 代表本場不分組
 
+  /// 是否讓站外的頁面讀得到這場的排行榜（/api/public/leaderboard）。
+  ///
+  /// 預設關閉：開啟等於讓全世界看得到這場所有人的暱稱與分數，而暱稱是
+  /// 參與者自己取的——那該是主辦方明確按下的一個動作，不是預設行為。
+  /// 對外只會有名次、暱稱、分數，不含真實姓名、信箱或內部 id。
+  publicLeaderboard Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   entryCodes    EntryCode[]

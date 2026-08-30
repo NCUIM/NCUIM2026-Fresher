@@ -20,6 +20,7 @@ const settingsSchema = z.object({
   // 成就獎勵完全失去份量，因此設上限。
   basePoints: z.number().int().min(0).max(1000),
   leaderboardTopN: z.number().int().min(1).max(100),
+  publicLeaderboard: z.boolean().optional(),
 });
 
 /** 讀取目前活動的設定。 */
@@ -42,6 +43,7 @@ export async function GET() {
     passcode: event.passcode,
     basePoints: event.basePoints,
     leaderboardTopN: event.leaderboardTopN,
+    publicLeaderboard: event.publicLeaderboard,
     teamCount: event.teamCount,
     status: event.status,
   });
@@ -98,6 +100,7 @@ export async function PATCH(req: Request) {
       passcode: true,
       basePoints: true,
       leaderboardTopN: true,
+      publicLeaderboard: true,
     },
   });
 

@@ -13,6 +13,11 @@ const createSchema = z.object({
   teamCount: z.number().int().min(0).max(50),
   basePoints: z.number().int().min(0).max(1000),
   leaderboardTopN: z.number().int().min(1).max(100),
+  /*
+    對外公開排行榜。預設關閉——開啟等於讓全世界看得到這場所有人的暱稱
+    與分數，那該是明確按下的一個動作。舊的呼叫端沒帶這個欄位時也維持關閉。
+  */
+  publicLeaderboard: z.boolean().default(false),
 });
 
 /**
@@ -44,6 +49,7 @@ export async function GET() {
       leaderboardTopN: true,
       teamCount: true,
       createdAt: true,
+      publicLeaderboard: true,
       _count: { select: { participants: true, teams: true, achievements: true } },
       hosts: {
         select: { admin: { select: { id: true, username: true } } },
@@ -87,8 +93,15 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { name, passcode, startsAt, teamCount, basePoints, leaderboardTopN } =
-    parsed.data;
+  const {
+    name,
+    passcode,
+    startsAt,
+    teamCount,
+    basePoints,
+    leaderboardTopN,
+    publicLeaderboard,
+  } = parsed.data;
 
   const startsAtDate = new Date(startsAt);
   if (Number.isNaN(startsAtDate.getTime())) {
@@ -104,6 +117,7 @@ export async function POST(req: Request) {
         teamCount,
         basePoints,
         leaderboardTopN,
+        publicLeaderboard,
       },
     });
 

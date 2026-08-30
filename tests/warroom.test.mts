@@ -16,6 +16,8 @@ import {
 type Pending = { pendingImpressions: { subjectId: string }[] };
 
 type Snapshot = {
+  now: string;
+  incremental: boolean;
   stats: {
     participants: number;
     encounters: number;
@@ -174,6 +176,86 @@ describe("活動戰情室的即時快照", () => {
     */
     assert.equal(typeof res.body.stats.maxAchievementPoints, "number");
     assert.ok(res.body.stats.maxAchievementPoints > 0);
+  });
+
+  it("帶 since 只回新的相遇，但總數仍是全場的", async () => {
+    /*
+      連線是這包快照裡最大的一塊，每 2.5 秒重傳一次的代價很高。增量之所以
+      安全，是因為 Scan 只增不刪——但兩件事必須守住：新的那筆不能漏掉，
+      而統計卡的總數不能跟著變成增量的長度。
+    */
+    const a = await joinAs("甲");
+    const b = await joinAs("乙");
+    const c = await joinAs("丙");
+    await scan(a, b);
+
+    const cookie = await loginAs("admin", "change-me");
+    const full = await get<Snapshot>("/api/admin/warroom", cookie);
+    assert.equal(full.body.incremental, false, "沒帶 since 就該是完整快照");
+    assert.equal(full.body.edges.length, 1);
+    assert.equal(full.body.stats.encounters, 1);
+    assert.ok(full.body.now, "要回傳伺服器時間當游標");
+
+    // 游標之後再產生一組相遇
+    await scan(a, c);
+
+    const delta = await get<Snapshot>(
+      `/api/admin/warroom?since=${encodeURIComponent(full.body.now)}`,
+      cookie,
+    );
+    assert.equal(delta.body.incremental, true);
+    assert.equal(
+      delta.body.stats.encounters,
+      2,
+      "統計卡要的是全場總數，不是這一包的長度",
+    );
+
+    const ids = delta.body.edges.map((e) => e.id);
+    const newEdge = (await get<Snapshot>("/api/admin/warroom", cookie)).body.edges.find(
+      (e) =>
+        [e.scannerId, e.scannedId].includes(a.id) &&
+        [e.scannerId, e.scannedId].includes(c.id),
+    );
+    assert.ok(newEdge, "第二組相遇要存在");
+    assert.ok(ids.includes(newEdge.id), "游標之後的新相遇不能漏掉");
+  });
+
+  it("未來的 since 拿不到任何相遇，但畫面數字不受影響", async () => {
+    const a = await joinAs("甲");
+    const b = await joinAs("乙");
+    await scan(a, b);
+
+    const cookie = await loginAs("admin", "change-me");
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const res = await get<Snapshot>(
+      `/api/admin/warroom?since=${encodeURIComponent(future)}`,
+      cookie,
+    );
+
+    assert.equal(res.body.edges.length, 0, "未來之後不會有相遇");
+    assert.equal(res.body.stats.encounters, 1, "總數仍要是全場的");
+    assert.equal(res.body.nodes.length, 2, "節點每次都給完整的");
+    assert.equal(res.body.ranking.length, 2, "排名每次都給完整的");
+  });
+
+  it("壞掉的 since 退回完整快照，而不是報錯", async () => {
+    /*
+      游標壞掉時寧可多傳一次也不要讓畫面空掉——這面畫面是投在大螢幕上的，
+      一個 500 會讓全場看到錯誤訊息。
+    */
+    const a = await joinAs("甲");
+    const b = await joinAs("乙");
+    await scan(a, b);
+
+    const cookie = await loginAs("admin", "change-me");
+    const res = await get<Snapshot>(
+      "/api/admin/warroom?since=not-a-timestamp",
+      cookie,
+    );
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.incremental, false);
+    assert.equal(res.body.edges.length, 1);
   });
 
   it("排名涵蓋全場，不是只有前幾名", async () => {

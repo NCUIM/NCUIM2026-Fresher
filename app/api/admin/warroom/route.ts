@@ -27,7 +27,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
   }
 
-  const requested = new URL(req.url).searchParams.get("eventId");
+  const params = new URL(req.url).searchParams;
+  const requested = params.get("eventId");
   const event = requested
     ? await requireEventAccess(admin, requested)
     : await resolveAdminEvent(admin);
@@ -38,9 +39,47 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "找不到活動" }, { status: 404 });
   }
 
+  /*
+    帶了 since 就只回傳那之後的新相遇。
+
+    連線是這包快照裡最大的一塊：滿載時一千多組相遇、每組約 150 位元組，
+    佔掉整包的九成。而它每 2.5 秒重傳一次，四小時就是將近 1 GB——對計量
+    傳輸量的託管資料庫（Neon、Supabase）來說，這一項就足以吃掉整個額度。
+
+    增量之所以安全，是因為 **Scan 只增不刪**：沒有更新、沒有刪除，
+    `(eventId, pairKey)` 唯一鍵也保證同一對人只會有一筆。客戶端把收到的
+    累積起來就是完整的那張網，不需要維護游標或處理重排。
+
+    節點、排名與事件牆仍然每次都給完整的——它們都只有幾十列，而且分數
+    與名次隨時在變，增量反而要處理「哪些變了」，得不償失。
+  */
+  const sinceParam = params.get("since");
+  const sinceDate = sinceParam ? new Date(sinceParam) : null;
+  const since =
+    sinceDate && !Number.isNaN(sinceDate.getTime()) ? sinceDate : null;
+
+  /*
+    回頭多抓五秒。
+
+    交易的提交時間會晚於 createdAt 的取值時間，剛好落在邊界上的那一筆
+    可能在上一次查詢時還看不到、下一次又因為時間戳比 since 早而被濾掉。
+    重疊視窗讓它一定會被抓到，重複的部分由客戶端依 id 去重。
+  */
+  const OVERLAP_MS = 5000;
+  const edgeWhere = since
+    ? {
+        eventId: event.id,
+        createdAt: { gte: new Date(since.getTime() - OVERLAP_MS) },
+      }
+    : { eventId: event.id };
+
+  // 客戶端下一次要送回來的時間戳。用伺服器的時鐘，不然兩邊時差會漏事件。
+  const now = new Date();
+
   const [
     participants,
     scans,
+    encounterTotal,
     recentScans,
     achievements,
     achievementTotal,
@@ -56,16 +95,22 @@ export async function GET(req: Request) {
       /*
       連線與事件牆分成兩個查詢。
 
-      連線要全部（那就是整張網），但只需要三個 id 欄位；事件牆只要最新
-      四十筆，卻要 join 兩邊的暱稱。合成一個查詢的話，等於替全場每一次
-      相遇都 join 兩次暱稱，而其中九成的結果會被 slice 丟掉——七十人的
-      活動跑一整天，這是唯一會隨時間持續變重的查詢。
+      連線只需要三個 id 欄位；事件牆只要最新四十筆，卻要 join 兩邊的暱稱。
+      合成一個查詢的話，等於替全場每一次相遇都 join 兩次暱稱，而其中九成
+      的結果會被 slice 丟掉。
     */
       prisma.scan.findMany({
-        where: { eventId: event.id },
+        where: edgeWhere,
         orderBy: { createdAt: "desc" },
         select: { id: true, scannerId: true, scannedId: true, createdAt: true },
       }),
+      /*
+      相遇總數要另外數。
+
+      走增量時 scans 只有新的那幾筆，長度不再等於全場的相遇組數——
+      統計卡若沿用它，數字會在每次輪詢跳成個位數。
+    */
+      prisma.scan.count({ where: { eventId: event.id } }),
       prisma.scan.findMany({
         where: { eventId: event.id },
         orderBy: { createdAt: "desc" },
@@ -114,13 +159,22 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     /*
-      統計卡用的三個數字。畫面可以自己數 nodes 與 edges 的長度算出前兩個，
-      但成就總數不行——事件牆只帶最新四十筆，用它的長度會在解鎖超過
-      四十次之後永遠停在 40。
+      客戶端下一次輪詢要送回來的時間戳，以及這一包是不是增量。
+
+      用伺服器的時鐘而不是讓客戶端自己取——投影用的那台電腦時間可能
+      差好幾分鐘，用它的時鐘當游標會整段漏掉或整段重傳。
+    */
+    now: now.toISOString(),
+    incremental: since !== null,
+    /*
+      統計卡用的三個數字，全部由資料庫直接數。
+
+      不能用回傳陣列的長度：走增量時 edges 只有新的那幾筆，
+      而事件牆的成就只帶最新四十筆——兩者都不等於全場總數。
     */
     stats: {
       participants: participants.length,
-      encounters: scans.length,
+      encounters: encounterTotal,
       achievements: achievementTotal,
       maxAchievementPoints: achievementMax._max.points ?? 0,
     },

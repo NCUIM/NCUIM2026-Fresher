@@ -39,7 +39,14 @@ export function EventOverview({
   hostOptions: HostOption[];
 }) {
   const router = useRouter();
-  const [events] = useState(initial);
+  /*
+    直接用 props，不要 useState(initial)。
+
+    useState 的初始值只在第一次渲染取用。router.refresh() 確實會重新執行
+    伺服器元件並傳進新的 initial，但 state 不會跟著換——結果是建立、封存、
+    刪除、指派主持人全都「成功了但畫面沒變」，使用者只好自己按 F5。
+  */
+  const events = initial;
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

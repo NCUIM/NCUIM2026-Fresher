@@ -30,6 +30,10 @@ type Rank = {
 };
 
 type Snapshot = {
+  /** 伺服器的時鐘。下一次輪詢用它當游標。 */
+  now: string;
+  /** 這一包的 edges 是不是只有新增的部分。 */
+  incremental: boolean;
   stats: {
     participants: number;
     encounters: number;
@@ -38,6 +42,7 @@ type Snapshot = {
     maxAchievementPoints: number;
   };
   nodes: SceneNode[];
+  /** 走增量時這裡只有新的相遇；完整的那張網由客戶端累積。 */
   edges: SceneEdge[];
   feed: FeedItem[];
   ranking: Rank[];
@@ -51,6 +56,19 @@ const FLASH_MS = 4000;
 
 /** 主動掃描排行顯示幾名。左欄放得下、又足夠看出誰在帶動現場。 */
 const INITIATIVE_TOP = 6;
+
+/*
+  左欄寬度的上下限與預設值。
+
+  下限 180 是統計卡上那個兩位數還讀得出來的寬度；上限 520 是再寬下去
+  中央的星圖就會被擠到失去意義——這面畫面的主體是那張網，側欄只是註解。
+*/
+const LEFT_MIN = 180;
+const LEFT_MAX = 520;
+const LEFT_DEFAULT = 256;
+
+/** 拉過的寬度記在瀏覽器裡。投影用的那台電腦解析度固定，不該每次都重調。 */
+const LEFT_WIDTH_KEY = "warroom:left-width";
 
 /**
  * 追蹤「這一輪才新出現的 id」，並在 ms 之後自動退場。
@@ -172,9 +190,48 @@ export function WarRoom({
   const [showRanking, setShowRanking] = useState(true);
   const [clock, setClock] = useState("");
   const [alert, setAlert] = useState({ n: 0, gold: false });
+  /*
+    左欄寬度。
+
+    先用預設值渲染、掛載後才讀 localStorage——直接在 useState 的初始值
+    裡讀會讓伺服器與瀏覽器算出不同的 HTML，React 會噴 hydration 錯誤。
+  */
+  const [leftWidth, setLeftWidth] = useState(LEFT_DEFAULT);
+  const [dragging, setDragging] = useState(false);
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(LEFT_WIDTH_KEY));
+      if (saved >= LEFT_MIN && saved <= LEFT_MAX) setLeftWidth(saved);
+    } catch {
+      // 無痕視窗或封鎖網站資料時讀不到，用預設值即可。
+    }
+  }, []);
+
+  const applyWidth = useCallback((next: number) => {
+    const clamped = Math.min(LEFT_MAX, Math.max(LEFT_MIN, Math.round(next)));
+    setLeftWidth(clamped);
+    try {
+      localStorage.setItem(LEFT_WIDTH_KEY, String(clamped));
+    } catch {
+      // 存不了就算了，這一次的調整仍然生效。
+    }
+  }, []);
 
   const seenEdges = useRef<Set<string>>(new Set());
   const seenFeed = useRef<Set<string>>(new Set());
+  /*
+    累積起來的完整那張網。
+
+    伺服器走增量之後只會送新的相遇，整張網由這裡拼起來。用 Map 而不是
+    陣列：伺服器的查詢帶了五秒的重疊視窗，同一筆會重複送到，靠 id 去重。
+  */
+  const allEdges = useRef<Map<string, SceneEdge>>(new Map());
+  /** 上一次成功取得快照時的伺服器時間，下一次當游標送回去。 */
+  const cursor = useRef<string | null>(null);
+  /** 上一次交給畫面的那個陣列。沒有新相遇時原樣沿用，避免整張圖重算。 */
+  const edgeList = useRef<SceneEdge[]>([]);
   /*
     已經收到過至少一份快照。
 
@@ -195,6 +252,38 @@ export function WarRoom({
     clear: clearFeed,
   } = useFlash(FLASH_MS);
 
+  /*
+    拖曳分隔線。
+
+    監聽掛在 window 而不是分隔線本身：滑鼠拉得比游標快時會離開那條
+    只有幾像素寬的線，事件就斷了，手感變成「拉一下就掉」。
+  */
+  useEffect(() => {
+    if (!dragging) return;
+
+    function onMove(e: PointerEvent) {
+      const box = shellRef.current?.getBoundingClientRect();
+      if (!box) return;
+      applyWidth(e.clientX - box.left);
+    }
+    function onUp() {
+      setDragging(false);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    // 拖曳時整頁禁止選取，否則會把側欄的文字一起反白。
+    const previous = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      document.body.style.userSelect = previous;
+    };
+  }, [dragging, applyWidth]);
+
   // 大螢幕上的時鐘。現場要對時間時，看的是這裡而不是誰的手機。
   useEffect(() => {
     function tick() {
@@ -213,9 +302,13 @@ export function WarRoom({
   }, []);
 
   // 切換活動時重置「看過的」，否則新活動的所有相遇都會被當成新事件一起閃。
+  // 游標與累積的網也要一起清掉，不然新場次會拿到上一場的連線。
   useEffect(() => {
     seenEdges.current = new Set();
     seenFeed.current = new Set();
+    allEdges.current = new Map();
+    edgeList.current = [];
+    cursor.current = null;
     hasSnapshot.current = false;
     clearEdges();
     clearFeed();
@@ -227,7 +320,13 @@ export function WarRoom({
 
     async function poll() {
       try {
-        const res = await fetch(`/api/admin/warroom?eventId=${eventId}`);
+        /*
+          帶著游標去要增量。沒有游標（首次載入、剛切換活動、上一次失敗）
+          就不帶，伺服器會回完整的一份——那也是連線中斷後的復原路徑。
+        */
+        const query = new URLSearchParams({ eventId });
+        if (cursor.current) query.set("since", cursor.current);
+        const res = await fetch(`/api/admin/warroom?${query}`);
         if (cancelled) return;
         if (!res.ok) {
           setError("讀取失敗");
@@ -236,6 +335,7 @@ export function WarRoom({
         const snapshot: Snapshot = await res.json();
         if (cancelled) return;
         setError(null);
+        cursor.current = snapshot.now;
 
         // 第一份快照不閃：整面一起亮起來，反而看不出發生了什麼。
         const isFirstSnapshot = !hasSnapshot.current;
@@ -250,7 +350,29 @@ export function WarRoom({
 
         snapshot.edges.forEach((e) => seenEdges.current.add(e.id));
         snapshot.feed.forEach((f) => seenFeed.current.add(f.id));
-        setData(snapshot);
+
+        /*
+          把新的相遇併進累積的那張網。
+
+          沒有新的就沿用上一次那個陣列——星圖是以陣列的 identity 判斷
+          要不要重建的，每次都給新陣列的話，即使一整分鐘沒事發生，
+          一千多條連線也會每 2.5 秒重算一次版面。
+        */
+        if (!snapshot.incremental) allEdges.current = new Map();
+        let added = false;
+        for (const e of snapshot.edges) {
+          if (!allEdges.current.has(e.id)) {
+            allEdges.current.set(e.id, e);
+            added = true;
+          }
+        }
+        if (added || edgeList.current.length === 0) {
+          edgeList.current = [...allEdges.current.values()].sort(
+            (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
+          );
+        }
+
+        setData({ ...snapshot, edges: edgeList.current });
 
         if (!isFirstSnapshot) {
           markEdges(newEdges);
@@ -384,9 +506,12 @@ export function WarRoom({
         </span>
       </header>
 
-      <div className="relative z-10 flex min-h-0 flex-1">
+      <div ref={shellRef} className="relative z-10 flex min-h-0 flex-1">
         {/* 左欄：三張統計卡與主動掃描排行 */}
-        <aside className="hidden w-64 shrink-0 flex-col gap-3 overflow-y-auto p-4 lg:flex">
+        <aside
+          className="hidden shrink-0 flex-col gap-3 overflow-y-auto p-4 lg:flex"
+          style={{ width: leftWidth }}
+        >
           <StatCard
             label="報到人數"
             value={stats?.participants ?? 0}
@@ -433,6 +558,35 @@ export function WarRoom({
             </ul>
           </div>
         </aside>
+
+        {/*
+          分隔線。
+
+          做成 separator 而不是純裝飾：投影時常常是用鍵盤在操作，
+          方向鍵能調寬度比「一定要用滑鼠精準抓住三像素」實際得多。
+        */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="調整左欄寬度"
+          aria-valuenow={leftWidth}
+          aria-valuemin={LEFT_MIN}
+          aria-valuemax={LEFT_MAX}
+          tabIndex={0}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDoubleClick={() => applyWidth(LEFT_DEFAULT)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") applyWidth(leftWidth - 16);
+            else if (e.key === "ArrowRight") applyWidth(leftWidth + 16);
+            else return;
+            e.preventDefault();
+          }}
+          className={`warroom-resizer hidden lg:block ${dragging ? "is-dragging" : ""}`}
+          title="拖曳調整寬度，雙擊還原"
+        />
 
         {/* 中央星圖 */}
         <div className="relative min-w-0 flex-1">

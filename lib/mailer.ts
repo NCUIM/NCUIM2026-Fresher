@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { prisma } from "./prisma";
+import { isTestDatabase } from "./test-db-guard";
 
 export type OutgoingMail = {
   to: string;
@@ -48,6 +49,21 @@ async function record(
  * 而 ADR-0001 所述的十四天查看期就等同不存在。
  */
 export async function sendMail(mail: OutgoingMail): Promise<void> {
+  /*
+    連著測試資料庫時一律不寄。
+
+    測試用的信箱是 ming@example.com 這類保留網域，根本不收信——每一封
+    都會退信。而退信不是無害的：它直接扣寄件網域的信譽分，累積到一定
+    比例，服務商會停掉整個帳號。到那時候真正要用的驗證信也寄不出去了。
+
+    擋在這裡而不是只靠啟動指令帶環境變數：指令會被忘記、會被繞過，
+    而「現在連的是哪個資料庫」是騙不了人的事實。
+  */
+  if (isTestDatabase()) {
+    await record(mail, "SKIPPED");
+    return;
+  }
+
   const host = process.env.SMTP_HOST;
 
   if (!host) {

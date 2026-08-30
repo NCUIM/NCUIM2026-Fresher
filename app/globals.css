@@ -630,6 +630,44 @@ body::before {
   }
 }
 
+/*
+  左欄的分隔線。
+
+  視覺上只有一條細線，但可抓取的範圍要寬得多——三像素的目標用滑鼠
+  抓不到。用 padding 撐開命中區、內側再畫那條線，看起來細、抓起來寬。
+*/
+.warroom-resizer {
+  position: relative;
+  flex: 0 0 auto;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.warroom-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(43, 232, 216, 0.18);
+  transition: background 150ms ease;
+}
+
+.warroom-resizer:hover::after,
+.warroom-resizer:focus-visible::after,
+.warroom-resizer.is-dragging::after {
+  width: 2px;
+  background: var(--color-neon);
+  box-shadow: 0 0 10px rgba(43, 232, 216, 0.6);
+}
+
+.warroom-resizer:focus-visible {
+  outline: none;
+}
+
 /* 主動掃描排行的長條 */
 .warroom-bar {
   display: block;

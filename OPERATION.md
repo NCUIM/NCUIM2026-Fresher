@@ -257,9 +257,132 @@ npm run mail:test -- 你的信箱@gmail.com
 > 從個人 Gmail 寄的信容易進垃圾郵件匣。**測試時務必連垃圾郵件匣一起看**，
 > 活動當天也要在說明時提醒新生。
 
+### 用自己的網域寄信（Resend）
+
+寄件者是 `noreply@你的網域` 而不是某個 gmail.com。先到 <https://resend.com/domains>
+把網域加進去，照它給的 SPF／DKIM 記錄設好 DNS，等它顯示 Verified，再填：
+
+```bash
+SMTP_HOST="smtp.resend.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="resend"           # 固定就是這個字，不是你的信箱
+SMTP_PASSWORD="re_你的金鑰"
+SMTP_FROM="NCUIM 新生茶會 <noreply@你的網域>"
+```
+
+兩個會卡住的地方：
+
+1. **網域沒驗證完成就寄，會得到 `550 ... domain is not verified`。**
+   在那之前只能用 `onboarding@resend.dev` 當寄件者，而且**只寄得到你自己的
+   帳號信箱**——這個限制可以用來確認「管線通不通」與「網域驗證」是兩件事。
+2. **中文網域（IDN）**要用 Punycode。`卡拉kara.台灣` 會變成
+   `xn--kara-9u0g392f.xn--kpry57d`，收信的人在地址欄看到的就是那一串。
+
+> 跑測試不會真的寄信。`sendMail` 在偵測到連著測試資料庫時一律只記
+> `SKIPPED`——測試用的是 `@example.com` 這種不收信的保留網域，真的寄出去
+> 每一封都會退信，而退信會直接扣寄件網域的信譽分，累積到一定比例
+> 服務商會停掉整個帳號。
+
 ---
 
-## 八、疑難排解
+## 八、部署到 Vercel + Neon
+
+七十人、一天的活動，這個組合要顧的東西最少：一個儀表板、沒有連線數
+算術、沒有 Dockerfile。
+
+### 1. 建立 Neon 資料庫
+
+到 <https://neon.tech> 建專案，複製**帶 `-pooler` 的那條連線字串**
+（serverless 環境要用連線池那個端點，不是直連的）：
+
+```
+postgresql://使用者:密碼@ep-xxx-pooler.區域.aws.neon.tech/neondb?sslmode=require
+```
+
+### 2. 建立資料表與第一個管理員
+
+在本機執行，`DATABASE_URL` 指向 Neon：
+
+```bash
+# 建立資料表
+DATABASE_URL="<Neon 連線字串>" npx prisma db push
+
+# 只建一個總管理員（不要用 db:seed，理由見下）
+export DATABASE_URL="<Neon 連線字串>"
+export SEED_ADMIN_USERNAME="你要的帳號"
+export SEED_ADMIN_PASSWORD="夠長的密碼"
+npm run admin:create
+```
+
+**正式環境不要用 `npm run db:seed`。** 那支種子會附帶建立一場示範活動，
+報到碼寫死成 `JOINNCU1`、通關碼 `1234`——那組值在原始碼裡、在文件裡、
+也在每一份 git 紀錄裡，拿它當正式活動的入口等於沒有入口。
+
+**除了管理員以外什麼都不用種。** 登入後從「活動管理」建立活動，那條路徑會
+自動產生**隨機的**報到碼、依你填的隊數建好組別、並寫入全部預設成就。
+這件事實測驗證過：從完全空的資料庫加一個管理員開始，建活動 → 報到 →
+掃描 → 寫短評 → 計分 → 排行榜，整條路都跑得通。
+
+`admin:create` 會先印出它要寫進哪個主機與資料庫再動手——本機與正式環境
+只差 `.env` 裡的一行，而寫錯地方不會有任何錯誤訊息。
+
+> ⚠️ `prisma db push` 會改動正式資料庫的結構。確認 `DATABASE_URL` 貼對了
+> 再按 Enter。
+
+### 3. Vercel
+
+連結 GitHub repo 之後，在專案設定的 Environment Variables 填入：
+
+| 變數 | 值 |
+| --- | --- |
+| `DATABASE_URL` | Neon 的 pooler 連線字串 |
+| `PUBLIC_ORIGIN` | `https://你的子網域` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` | 見上一節 |
+| `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | 見上一節 |
+
+`build` 指令已經是 `prisma generate && next build`。**這個 `prisma generate`
+不能省**：Vercel 會快取 `node_modules`，少了它，Prisma Client 會停在
+上一次的 schema，症狀是查詢缺欄位而不是建置失敗。
+
+### 4. 子網域
+
+在 Cloudflare（或你的 DNS 服務商）加一筆 CNAME 指向 Vercel 給的目標。
+用 Cloudflare 的話**先關掉橘色雲朵（DNS only）**，等憑證簽發完成再說；
+開著 Proxy 而 SSL 模式又是 Flexible 的話會無限轉址。
+
+DNS 生效後，把 `PUBLIC_ORIGIN` 改成該子網域並重新部署——**信件連結是從
+這個變數組出來的**，設錯的話新生收到的是點不開的連結。
+
+### 5. 上線前一定要驗的三件事
+
+```bash
+# 1. 寄信真的送得出去（用正式的 SMTP 設定）
+npm run mail:test -- 你的信箱
+
+# 2. 手機開啟子網域，實際掃一次 QR Code
+#    相機需要 HTTPS，這一步同時驗證憑證正常
+
+# 3. 走一次完整報到 → 收驗證信 → 點連結
+#    確認連結的網域是子網域而不是 localhost
+```
+
+> Neon 免費方案閒置會讓計算資源休眠，第一個請求要等幾百毫秒到數秒。
+> **活動當天開場前先開一次頁面把它叫醒。**
+
+### 備案：Cloud Run + Cloud SQL
+
+不受 Neon 的 5 GB 傳輸額度限制，代價是 Cloud SQL 一直開著就一直收費，
+而且要自己寫 Dockerfile、設連接器與網域對應。若要改走這條路：
+
+- `DATABASE_URL` 改成 Unix socket 形式：
+  `postgresql://使用者:密碼@localhost/ncuim?host=/cloudsql/專案:區域:執行個體`
+- 算好連線數：`--max-instances × DB_POOL_MAX ≤ Cloud SQL 的 max_connections`
+  （`DB_POOL_MAX` 預設 5，見 `lib/prisma.ts`）
+
+---
+
+## 九、疑難排解
 
 ### `ECONNREFUSED` / `Cannot read properties of undefined`
 

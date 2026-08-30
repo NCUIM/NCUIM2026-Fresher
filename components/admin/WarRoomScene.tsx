@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cardColorByKey } from "@/lib/card-colors";
 
 export type SceneNode = {
@@ -64,6 +64,16 @@ const MOON = "#ffce5c";
 
 /** 掃描漣漪的存活時間。 */
 const RIPPLE_S = 1.4;
+
+/*
+  縮放的上下限。
+
+  節點一多，暱稱在滿版檢視下就小到讀不出來——要看清楚某一叢是誰跟誰，
+  只能放大。上限 6 倍足以把單一節點的名字看清楚；下限 0.4 則讓人在
+  節點散得很開時退遠一點看整體。
+*/
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 6;
 
 /** 成就特效的基礎長度，再依等級加長。等級愈高，愈值得讓全場看久一點。 */
 const BURST_BASE_S = 1.8;
@@ -167,6 +177,37 @@ export function WarRoomScene({
   maxAchievementPoints: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /*
+    使用者的視角。放在 ref 而不是 state：它每一幀都被繪製迴圈讀取，
+    拖曳時每次移動都 setState 會讓整個元件重畫，畫面反而變頓。
+    只有右下角那個百分比需要 React 知道，所以另外開一個輕量的 state。
+  */
+  const view = useRef({ zoom: 1, panX: 0, panY: 0 });
+  const [zoomLabel, setZoomLabel] = useState(1);
+
+  const onViewChange = useCallback((z: number) => setZoomLabel(z), []);
+
+  const resetView = useCallback(() => {
+    view.current = { zoom: 1, panX: 0, panY: 0 };
+    setZoomLabel(1);
+  }, []);
+
+  /** 按鈕用的縮放。以畫面中心為基準，而不是游標。 */
+  const zoomBy = useCallback((factor: number) => {
+    const v = view.current;
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v.zoom * factor));
+    if (next === v.zoom) return;
+    const box = canvasRef.current?.getBoundingClientRect();
+    if (box) {
+      const cx = box.width / 2;
+      const cy = box.height / 2;
+      // 維持畫面中心那一點不動，與滾輪縮放同一套算法。
+      v.panX = cx - ((cx - v.panX) / v.zoom) * next;
+      v.panY = cy - ((cy - v.panY) / v.zoom) * next;
+    }
+    v.zoom = next;
+    setZoomLabel(next);
+  }, []);
   const dataRef = useRef({
     nodes,
     edges,
@@ -217,6 +258,68 @@ export function WarRoomScene({
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
+
+    /*
+      以游標為中心縮放。
+
+      單純把 zoom 乘上去會以畫布左上角為中心，於是想看的那一叢會在放大
+      的過程中被推出畫面。這裡先把游標下的場景座標算出來，縮放後再反推
+      平移量，讓那一點固定不動——這才是「往那裡放大」該有的手感。
+    */
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      const box = canvas!.getBoundingClientRect();
+      const sx = e.clientX - box.left;
+      const sy = e.clientY - box.top;
+      const v = view.current;
+      const next = Math.min(
+        ZOOM_MAX,
+        Math.max(ZOOM_MIN, v.zoom * Math.exp(-e.deltaY * 0.0015)),
+      );
+      if (next === v.zoom) return;
+      // 游標下的場景座標，縮放前後必須一致。
+      const px = (sx - offsetX - v.panX) / (scale * v.zoom);
+      const py = (sy - offsetY - v.panY) / (scale * v.zoom);
+      v.panX = sx - offsetX - px * scale * next;
+      v.panY = sy - offsetY - py * scale * next;
+      v.zoom = next;
+      onViewChange(next);
+    }
+
+    let panning: { x: number; y: number; panX: number; panY: number } | null =
+      null;
+
+    function onPointerDown(e: PointerEvent) {
+      if (e.button !== 0) return;
+      panning = {
+        x: e.clientX,
+        y: e.clientY,
+        panX: view.current.panX,
+        panY: view.current.panY,
+      };
+      canvas!.setPointerCapture(e.pointerId);
+      canvas!.style.cursor = "grabbing";
+    }
+    function onPointerMove(e: PointerEvent) {
+      if (!panning) return;
+      view.current.panX = panning.panX + (e.clientX - panning.x);
+      view.current.panY = panning.panY + (e.clientY - panning.y);
+    }
+    function onPointerUp() {
+      panning = null;
+      canvas!.style.cursor = "grab";
+    }
+    function onDoubleClick() {
+      resetView();
+    }
+
+    canvas.style.cursor = "grab";
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerUp);
+    canvas.addEventListener("dblclick", onDoubleClick);
 
     /* 漂浮的數位塵。純氛圍，不承載任何資訊。 */
     const dust = Array.from({ length: 44 }, () => ({
@@ -483,8 +586,13 @@ export function WarRoomScene({
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, width, height);
       ctx!.save();
-      ctx!.translate(offsetX, offsetY);
-      ctx!.scale(scale, scale);
+      /*
+        兩層變換疊在一起：外層是把 1280×860 的場景等比塞進畫布並置中
+        （resize 算出來的），內層是使用者自己的縮放與平移。分開之後，
+        視窗大小改變不會把使用者拉到的視角弄丟。
+      */
+      ctx!.translate(offsetX + view.current.panX, offsetY + view.current.panY);
+      ctx!.scale(scale * view.current.zoom, scale * view.current.zoom);
 
       // 地面的透視格線
       ctx!.save();
@@ -635,15 +743,54 @@ export function WarRoomScene({
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointercancel", onPointerUp);
+      canvas.removeEventListener("dblclick", onDoubleClick);
     };
-  }, []);
+  }, [onViewChange, resetView]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="size-full"
-      role="img"
-      aria-label={`參與者連線圖，${nodes.length} 人、${edges.length} 組相遇`}
-    />
+    <div className="relative size-full">
+      <canvas
+        ref={canvasRef}
+        className="size-full touch-none"
+        role="img"
+        aria-label={`參與者連線圖，${nodes.length} 人、${edges.length} 組相遇`}
+      />
+
+      {/*
+        縮放控制。
+
+        滾輪與拖曳已經夠用，但投影時常常是別人在操作，而「這裡可以放大」
+        不會有人主動去試——擺出按鈕才看得見這個功能存在。百分比同時也是
+        現在有沒有被拉歪的唯一線索。
+      */}
+      <div className="absolute right-3 bottom-3 flex items-center gap-1">
+        <button
+          onClick={() => zoomBy(1 / 1.3)}
+          aria-label="縮小"
+          className="warroom-panel tap-target size-9 text-lg text-dim transition-colors hover:text-neon"
+        >
+          −
+        </button>
+        <button
+          onClick={resetView}
+          className="warroom-panel px tap-target px-3 text-xs text-dim transition-colors hover:text-neon"
+          title="回到完整檢視（畫面上雙擊亦可）"
+        >
+          {Math.round(zoomLabel * 100)}%
+        </button>
+        <button
+          onClick={() => zoomBy(1.3)}
+          aria-label="放大"
+          className="warroom-panel tap-target size-9 text-lg text-dim transition-colors hover:text-neon"
+        >
+          ＋
+        </button>
+      </div>
+    </div>
   );
 }

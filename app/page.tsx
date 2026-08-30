@@ -16,16 +16,6 @@ export default async function Home() {
     select: { name: true },
   });
 
-  if (!event) {
-    return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-2 px-6 text-center">
-        <span className="px text-[11px] tracking-[0.2em] text-faint">OFFLINE</span>
-        <h1 className="text-xl font-black">目前沒有進行中的活動</h1>
-        <p className="text-sm text-dim">請等主辦方開放報到後再回來。</p>
-      </main>
-    );
-  }
-
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-6 pt-14 pb-[calc(1.5rem+var(--safe-bottom))]">
       {/*
@@ -48,22 +38,43 @@ export default async function Home() {
           className="size-36 drop-shadow-[0_0_32px_rgba(90,120,255,0.35)]"
         />
 
+        {/*
+          沒有進行中的活動時，維持同一個版面，只換掉中間那一段。
+
+          原本這裡整頁退化成一句「目前沒有進行中的活動」，連吉祥物與
+          找回身分的入口都不見了——而「已經報到過但看不到資料」的人
+          最可能就是在活動封存之後回來的，那正是他最需要找回入口的時候。
+        */}
         <div className="flex flex-col gap-3">
-          <span className="px text-glow-neon text-[11px] tracking-[0.24em] text-neon">
-            CHECK IN
+          <span
+            className={`px text-[11px] tracking-[0.24em] ${
+              event ? "text-glow-neon text-neon" : "text-faint"
+            }`}
+          >
+            {event ? "CHECK IN" : "OFFLINE"}
           </span>
-          <h1 className="text-3xl font-black">{event.name}</h1>
+          <h1 className="text-3xl font-black">
+            {event ? event.name : "目前沒有進行中的活動"}
+          </h1>
           <p className="text-sm text-dim">
-            掃描主辦方提供的報到 QR Code，開始收集大家的卡片。
+            {event
+              ? "掃描主辦方提供的報到 QR Code，開始收集大家的卡片。"
+              : "請等主辦方開放報到後再回來。"}
           </p>
         </div>
 
-        <Link
-          href="/scan"
-          className="tap-target glow-neon flex w-full items-center justify-center rounded-sm bg-neon py-3.5 font-bold text-void"
-        >
-          掃描報到碼
-        </Link>
+        {event ? (
+          <Link
+            href="/scan"
+            className="tap-target glow-neon flex w-full items-center justify-center rounded-sm bg-neon py-3.5 font-bold text-void"
+          >
+            掃描報到碼
+          </Link>
+        ) : (
+          <span className="flex w-full items-center justify-center rounded-sm border border-line py-3.5 text-sm text-faint">
+            尚未開放報到
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col items-center gap-1 border-t border-line pt-5">

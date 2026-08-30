@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/admin-session";
@@ -24,7 +25,37 @@ export default async function WarRoomPage() {
     select: { id: true, name: true, status: true },
   });
 
-  if (events.length === 0) redirect("/admin/events");
+  /*
+    沒有活動時把話說清楚，不要把人彈回去。
+
+    原本這裡是 redirect("/admin/events")——使用者按了「活動戰情室」卻回到
+    活動清單，沒有任何訊息。那看起來像按鈕壞了，而不是「還沒有東西可以看」。
+    全新的環境一定會先遇到這個狀態：管理員建好了，活動還沒建。
+  */
+  if (events.length === 0) {
+    return (
+      <main className="warroom relative grid min-h-dvh place-items-center px-6 text-center text-chalk">
+        <div aria-hidden="true" className="warroom-scanlines" />
+        <div className="warroom-panel relative z-10 flex max-w-sm flex-col items-center gap-3 px-8 py-10">
+          <span className="px text-[11px] tracking-[0.3em] text-faint">
+            NO ACTIVE EVENT
+          </span>
+          <h1 className="text-xl font-black">還沒有任何活動</h1>
+          <p className="text-sm text-dim">
+            {admin.role === "SUPER"
+              ? "戰情室顯示的是某一場活動的即時狀況。先建立一場活動，這裡才有東西可以看。"
+              : "你還沒有被指派任何活動，請聯絡總管理員。"}
+          </p>
+          <Link
+            href="/admin/events"
+            className="tap-target mt-2 rounded-sm border border-neon px-5 text-sm font-bold text-neon transition-colors hover:bg-neon hover:text-void"
+          >
+            {admin.role === "SUPER" ? "去建立活動" : "回到活動清單"}
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return <WarRoom events={events} initialEventId={events[0].id} />;
 }

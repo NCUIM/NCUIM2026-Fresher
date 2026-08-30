@@ -166,7 +166,16 @@ describe("找回身分", () => {
     );
     const { rescueUrl } = await issued.json();
 
-    const res = await fetch(rescueUrl, { redirect: "manual" });
+    /*
+      只取路徑，網域打回受測伺服器。
+
+      rescueUrl 的網域來自 PUBLIC_ORIGIN——那是要印在信裡給使用者點的
+      正式網址，不是這台測試伺服器。直接 fetch 它的話，測試會在正式
+      環境變數一設定之後開始去連真的網域，而這個案例要驗的是「連結能
+      在新裝置上綁定身分」，與它掛在哪個網域無關。
+    */
+    const path = new URL(rescueUrl).pathname + new URL(rescueUrl).search;
+    const res = await fetch(`${BASE}${path}`, { redirect: "manual" });
     const cookie = (res.headers.get("set-cookie") ?? "").split(";")[0];
     assert.ok(cookie.startsWith("pid="), "救援連結應在新裝置上種下身分 cookie");
 

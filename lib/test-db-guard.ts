@@ -22,3 +22,13 @@ export function assertTestDatabase(scriptName: string): void {
     process.exit(1);
   }
 }
+
+/**
+ * 現在連的是不是測試資料庫。
+ *
+ * 與 assertTestDatabase 的差別是它不中止程式，只回報。給的是「這個情境
+ * 該不該有對外副作用」的判斷依據——例如寄信。
+ */
+export function isTestDatabase(): boolean {
+  return (process.env.DATABASE_URL ?? "").includes("ncuim_test");
+}

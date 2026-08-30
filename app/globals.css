@@ -270,6 +270,34 @@ body::before {
   inset: 0;
 }
 
+/*
+  載入骨架。
+
+  用非常慢的呼吸式脈動而不是常見的掃光效果：這個 app 的底色很暗，
+  掃光在深色上會變成一道明顯的亮條，反而比靜止的方塊更干擾。
+*/
+.skeleton {
+  background: rgba(43, 232, 216, 0.06);
+  border: 1px solid rgba(43, 232, 216, 0.08);
+  animation: skeleton-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
 /* ── 字柱：直排、等速左移 ────────────────────────────── */
 
 /*

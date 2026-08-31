@@ -1,0 +1,42 @@
+# Docker 建置情境要排除的東西。
+#
+# 沒有這個檔案的話 `COPY . .` 會把整個目錄打進映像，後果有三個：
+#   1. .env 被複製進去——金鑰寫死在映像層裡，而映像會被推到 Artifact Registry
+#   2. 本機建置會讀到 .env 而「意外成功」，雲端沒有 .env 才失敗，
+#      症狀是「我本機明明可以」——最難查的那種
+#   3. node_modules 會覆蓋掉 deps 階段裝好的那份（Windows 的二進位檔
+#      放進 Alpine 容器不能執行）
+#
+# Cloud Build 另外還有 GCP/.gcloudignore 控制「上傳什麼」，兩者互補：
+# .gcloudignore 決定什麼離開你的電腦，.dockerignore 決定什麼進入映像。
+
+# 金鑰
+.env
+.env.*
+!.env.example
+
+# 建置產物與相依（deps 階段會自己裝）
+node_modules
+.next
+out
+dist
+
+# 版控與說明文件，執行期用不到
+.git
+.gitignore
+*.md
+docs
+
+# 測試與壓測腳本
+tests
+scripts/loadtest.mts
+scripts/ttfb.mts
+
+# 編輯器與作業系統
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Cloud SQL Auth Proxy（本機工具，37MB）
+GCP/cloud-sql-proxy.exe

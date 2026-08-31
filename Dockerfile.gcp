@@ -48,13 +48,24 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 產生 Prisma Client。一定要在 next build 之前——建置時會匯入它。
-RUN npx prisma generate
-
-# 建置期不連資料庫，但 lib/prisma.ts 在模組載入時就會檢查這個變數。
+# 建置期不連資料庫，但有兩個地方在**載入模組時**就要求這個變數存在：
+#   - prisma.config.ts 的 env("DATABASE_URL")（Prisma 7 會直接拋錯）
+#   - lib/prisma.ts 的模組層檢查
 # 給一個語法正確的假值，真正的連線字串由 Cloud Run 的環境變數提供。
+#
+# ⚠️ 這一行必須在 `prisma generate` **之前**。放後面的話本機建置仍然會過
+# ——因為 prisma.config.ts 的 `import "dotenv/config"` 會讀到 .env——
+# 但 Cloud Build 是從 GitHub clone，.env 被 gitignore，於是只有雲端會失敗：
+#
+#   PrismaConfigEnvError: Cannot resolve environment variable: DATABASE_URL
+#
+# 這也是為什麼要有 .dockerignore：沒有它，COPY . . 會把本機的 .env
+# 一起打進映像，既洩漏金鑰，又讓本機建置用一個雲端不存在的檔案矇混過關。
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# 產生 Prisma Client。一定要在 next build 之前——建置時會匯入它。
+RUN npx prisma generate
 
 # 開啟 standalone 輸出。
 #

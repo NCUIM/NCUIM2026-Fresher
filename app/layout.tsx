@@ -21,8 +21,44 @@ const silkscreen = Silkscreen({
 });
 
 export const metadata: Metadata = {
-  title: "卡片收集",
-  description: "活動卡片收集系統",
+  /*
+    OpenGraph 的絕對網址需要一個基準。沒有 metadataBase 時 Next 會退回
+    localhost，貼到聊天室的預覽圖就抓不到——那是只在正式環境才會出現的錯。
+
+    用 PUBLIC_ORIGIN 而不是讀請求標頭：metadata 在模組層求值，拿不到
+    request；而標頭本來就是客戶端可偽造的（見 lib/origin.ts）。
+  */
+  metadataBase: process.env.PUBLIC_ORIGIN
+    ? new URL(process.env.PUBLIC_ORIGIN)
+    : undefined,
+
+  title: "NCUIM 新生茶會",
+  description: "卡片收集遊戲，掃一下就開始",
+
+  /*
+    明確寫出 OpenGraph，不要讓各家 App 自己從 title/description 推斷。
+    推斷出來的結果在 LINE、Messenger、Discord 上都不一樣，而活動連結
+    主要就是靠聊天室傳播。
+
+    圖沿用分頁圖示。標準的 OG 圖是 1200×630 的橫幅，我們這張是 256
+    見方，預覽卡會顯示成右側的小方圖——對一個活動連結足夠了。
+  */
+  openGraph: {
+    title: "NCUIM 新生茶會",
+    description: "卡片收集遊戲，掃一下就開始",
+    type: "website",
+    locale: "zh_TW",
+    images: ["/icon-256.png"],
+  },
+
+  /*
+    不進搜尋引擎。這個站有參與者的暱稱、頭像與收集紀錄，沒有理由讓它們
+    出現在搜尋結果裡；活動封存之後也不該留下殘影。
+
+    這**不影響**貼連結時的預覽卡——那是抓 OG 標籤，跟索引無關。
+  */
+  robots: { index: false, follow: false },
+
   /*
     分頁圖示與 iOS「加入主畫面」的圖示。後者值得特別設：
     活動當天有人會把頁面加到主畫面，沒有這個就只會拿到一張網頁截圖。

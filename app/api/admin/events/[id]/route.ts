@@ -7,6 +7,32 @@ import {
   setActiveEvent,
 } from "@/lib/admin-session";
 
+/**
+ * 目前的報到人數。
+ *
+ * 只回一個數字，因為它的呼叫者是投影畫面——那一頁會整場開著、每幾秒問
+ * 一次，而現場的網路要留給正在報到的人。回傳參與者清單會讓每次輪詢
+ * 帶著上百筆資料在跑，只為了畫面上那一個數字。
+ */
+export async function GET(
+  _req: Request,
+  ctx: RouteContext<"/api/admin/events/[id]">,
+) {
+  const admin = await getCurrentAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  if (!(await canAccessEvent(admin, id))) {
+    // 與「不存在」回同一個狀態，避免用 id 探測有哪些活動存在。
+    return NextResponse.json({ error: "找不到這場活動" }, { status: 404 });
+  }
+
+  const count = await prisma.participant.count({ where: { eventId: id } });
+  return NextResponse.json({ participants: count });
+}
+
 const patchSchema = z.object({
   /** 切換到這場活動。主持人也能用，但仍受指派關係限制。 */
   makeActive: z.boolean().optional(),

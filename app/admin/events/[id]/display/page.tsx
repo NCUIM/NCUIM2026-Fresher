@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin, requireEventAccess } from "@/lib/admin-session";
 import { getPublicOrigin } from "@/lib/origin";
+import { CheckInCount } from "@/components/admin/CheckInCount";
 
 /**
  * 現場投影用的報到畫面：一個大 QR、一組大通關碼。
@@ -93,7 +94,12 @@ export default async function DisplayPage(
 
       <footer className="flex flex-col items-center gap-1 text-center">
         <p className="px text-sm text-faint">
-          已報到 {event._count.participants} 人
+          已報到{" "}
+          <CheckInCount
+            eventId={event.id}
+            initial={event._count.participants}
+          />{" "}
+          人
         </p>
         <p className="text-xs break-all text-faint/70">{joinUrl}</p>
         <Link href={`/admin/events/${event.id}`} className="tap-target mt-2 rounded-sm border border-line px-3 py-1 text-xs text-faint transition-colors hover:border-neon/60 hover:text-chalk">

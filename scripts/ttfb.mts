@@ -28,7 +28,7 @@ const SAMPLES = 5;
   最後那一個是對照組：如果它和前兩個一樣慢，代表快取沒生效。
 */
 const PATHS = [
-  "/api/entry/JOINNCU1",
+  "/api/entry/H9A7S5S5",
   "/",
   "/api/public/leaderboard",
 ];

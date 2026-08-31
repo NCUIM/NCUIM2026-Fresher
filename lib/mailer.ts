@@ -85,7 +85,9 @@ export async function sendMail(mail: OutgoingMail): Promise<void> {
 
   try {
     await transport.sendMail({
-      from: process.env.SMTP_FROM ?? "no-reply@localhost",
+      // `||` 而不是 `??`：部署工具常把「沒設定」帶成空字串，
+      // 而空的 from 會讓 nodemailer 直接拋錯。
+      from: process.env.SMTP_FROM?.trim() || "no-reply@localhost",
       to: mail.to,
       subject: mail.subject,
       text: mail.text,

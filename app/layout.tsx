@@ -55,16 +55,26 @@ export default function RootLayout({
       <body className="antialiased">
         {children}
         {/*
-          兩者都只在 Vercel 上實際運作，本機開發時不會送出任何請求。
-
           Analytics 記錄的是瀏覽量；SpeedInsights 記錄的是真實使用者的
           載入耗時（LCP、TTFB 等）。要判斷「現場到底慢在哪」看的是後者——
           它會告訴你慢的是伺服器回應還是前端渲染，那是兩種完全不同的修法。
 
+          只在 Vercel 上掛載。這兩個元件會去抓 /_vercel/insights/script.js
+          與 /_vercel/speed-insights/script.js，那是 Vercel 平台注入的路徑——
+          在 Cloud Run 上不存在，每次載入頁面都會多兩個 404。功能不會壞，
+          但那是白費的往返，而活動現場的網路已經夠擠了。
+
+          VERCEL=1 由 Vercel 自動注入，建置期與執行期都有。這一層是 server
+          component，判斷在伺服器端完成，不會有客戶端的環境變數問題。
+
           放在 children 之後：它們不影響版面，晚一點掛載也不會擋到內容。
         */}
-        <Analytics />
-        <SpeedInsights />
+        {process.env.VERCEL === "1" && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );

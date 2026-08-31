@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
 
         ENOENT: no such file or directory, open '.next/next-server.js.nft.json'
 
-    所以改成由 GCP/Dockerfile 明確設定 BUILD_STANDALONE=1 才啟用。
+    所以改成由 Dockerfile.gcp 明確設定 BUILD_STANDALONE=1 才啟用。
     Vercel 與本機的一般建置都不受影響。
   */
   output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,

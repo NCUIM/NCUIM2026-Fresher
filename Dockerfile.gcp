@@ -1,0 +1,80 @@
+# syntax=docker/dockerfile:1
+
+# ─────────────────────────────────────────────────────────────
+# Cloud Run 用的映像。
+#
+# 分三個階段是為了讓最終映像只帶執行期需要的東西：建置工具、原始碼、
+# devDependencies 都留在前兩階段。Cloud Run 每次冷啟動都要拉這個映像，
+# 體積直接影響啟動時間。
+# ─────────────────────────────────────────────────────────────
+
+# 版本與本機開發一致。Alpine 是 musl libc，而 Prisma 7 搭配 driver adapter
+# 走的是純 JavaScript 的 pg 驅動，不需要 Rust 查詢引擎的二進位檔——
+# 這正是可以用 Alpine 的原因，換成別的 Prisma 設定就未必了。
+FROM node:24-alpine AS base
+
+
+# ── 1. 安裝相依 ──────────────────────────────────────────────
+FROM base AS deps
+WORKDIR /app
+
+# 只複製 lock 檔，讓這一層在原始碼變動時仍能命中快取。
+COPY package.json package-lock.json ./
+RUN npm ci
+
+
+# ── 2. 建置 ─────────────────────────────────────────────────
+FROM base AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# 產生 Prisma Client。一定要在 next build 之前——建置時會匯入它。
+RUN npx prisma generate
+
+# 建置期不連資料庫，但 lib/prisma.ts 在模組載入時就會檢查這個變數。
+# 給一個語法正確的假值，真正的連線字串由 Cloud Run 的環境變數提供。
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# 開啟 standalone 輸出。
+#
+# 這個開關存在的原因是它**不能**一律開啟：Vercel 有自己的檔案追蹤流程，
+# 同時啟用會讓 Vercel 的建置失敗（找不到 next-server.js.nft.json）。
+# 由這裡明確指定，兩條部署路徑才能共用同一份 next.config.ts。
+ENV BUILD_STANDALONE=1
+RUN npm run build
+
+
+# ── 3. 執行 ─────────────────────────────────────────────────
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# 不用 root 執行。Cloud Run 本身有隔離，但這是零成本的一層。
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+
+# standalone 輸出已經把追蹤到的相依打包進去，不需要整個 node_modules。
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Prisma Client 的產物在 node_modules/.prisma 底下。
+#
+# 目前這個版本的 Next 追蹤得到它（本機驗證過 standalone 確實有帶），
+# 但那是靠檔案追蹤推斷出來的，而 Prisma Client 是執行期動態載入的——
+# 追蹤失準時的症狀是「建置成功、啟動後才找不到模組」，那時候要查很久。
+# 多這一行的成本是幾 MB，保險值得。
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+
+USER nextjs
+
+# Cloud Run 會用 PORT 環境變數告訴容器要聽哪個埠，預設 8080。
+ENV PORT=8080
+EXPOSE 8080
+
+# standalone 模式產生的是 server.js，不是 next start。
+CMD ["node", "server.js"]

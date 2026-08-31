@@ -475,6 +475,136 @@ body::before {
 }
 
 /* ───────────────────────────────────────────────
+   後台排行榜
+
+   這一組**會**受 prefers-reduced-motion 影響，跟戰情室相反。
+   戰情室的動態本身就是資訊（誰剛連上），這裡的動態只是修飾——
+   審核違規內容的人不需要卡片先轉一圈才看得到頭像。
+   ─────────────────────────────────────────────── */
+
+/* 翻牌：背面朝上進場，轉正露出正面。
+
+   perspective 給在外層而不是會轉的那一層：轉動的元素自己帶 perspective
+   時，透視原點會跟著它一起轉，翻到一半會出現不該有的形變。 */
+.card-flip {
+  perspective: 1400px;
+}
+
+.card-flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: card-flip 720ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+/* 從 180 度起手，所以第一眼看到的是背面。scale 讓它同時往前推進來，
+   純旋轉會像門在開，帶著縮放才像卡片被翻過來。 */
+@keyframes card-flip {
+  from {
+    transform: rotateY(180deg) scale(0.86);
+    opacity: 0.4;
+  }
+  to {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.card-flip-face {
+  backface-visibility: hidden;
+  /* Safari 仍需要前綴，少了它背面會透出來疊在正面上。 */
+  -webkit-backface-visibility: hidden;
+}
+
+.card-flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  border: 2px solid color-mix(in oklab, var(--color-neon) 45%, transparent);
+  background:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in oklab, var(--color-neon) 7%, transparent) 0 10px,
+      transparent 10px 20px
+    ),
+    var(--color-slate);
+}
+
+/* 翻正之後掠過一道光。時間比翻牌長一點點，讓它接在動作末尾而不是同時發生。 */
+.card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    color-mix(in oklab, white 22%, transparent) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: card-shine 900ms ease-out 420ms 1;
+  pointer-events: none;
+}
+
+@keyframes card-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* 名次列依序落下。--row 由 JS 給序號，讓它們有先後而不是整片一起出現。 */
+.rank-row {
+  opacity: 0;
+  animation: rank-row-in 380ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--row, 0) * 28ms);
+}
+
+@keyframes rank-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 前三名的名次數字。用光暈而不是換顏色——顏色已經被分數和狀態用掉了。 */
+.rank-medal-1 {
+  color: #ffce5c;
+  text-shadow: 0 0 12px rgba(255, 206, 92, 0.55);
+}
+.rank-medal-2 {
+  color: #cfd8e6;
+  text-shadow: 0 0 10px rgba(207, 216, 230, 0.4);
+}
+.rank-medal-3 {
+  color: #e0a56b;
+  text-shadow: 0 0 10px rgba(224, 165, 107, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-flip-inner,
+  .rank-row {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .card-shine::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* ───────────────────────────────────────────────
    戰情室
 
    這一組刻意不受 prefers-reduced-motion 影響：那面畫面是投在大螢幕上

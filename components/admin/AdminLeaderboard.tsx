@@ -84,15 +84,27 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
         </span>
       </div>
 
-      <ul className="flex flex-col gap-1.5">
-        {entries.map((e) => (
+      {/*
+        桌機分兩欄。一百人的清單單欄要捲很久，而後台是拿筆電看的——
+        寬度本來就在那裡，不用白白留給空白。
+      */}
+      <ul className="grid gap-1.5 lg:grid-cols-2 lg:gap-2">
+        {entries.map((e, i) => (
           <li
             key={e.participantId}
-            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line px-3 py-2.5"
+            /* --row 讓每一列依序落下，而不是整片一起出現。 */
+            style={{ "--row": i } as React.CSSProperties}
+            className="rank-row flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line px-3 py-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-neon/50 hover:shadow-[0_4px_20px_-6px_rgba(44,232,181,0.35)]"
           >
             <span
               className={`px w-8 shrink-0 text-sm font-bold ${
-                e.rank <= 3 ? "text-neon" : "text-faint"
+                e.rank === 1
+                  ? "rank-medal-1"
+                  : e.rank === 2
+                    ? "rank-medal-2"
+                    : e.rank === 3
+                      ? "rank-medal-3"
+                      : "text-faint"
               }`}
             >
               {String(e.rank).padStart(2, "0")}
@@ -102,7 +114,7 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
             </span>
             <span className="px shrink-0 text-sm text-neon">{e.score}</span>
 
-            <span className="flex w-full gap-2">
+            <span className="flex w-full gap-2 sm:w-auto sm:flex-1 sm:justify-end">
               <button
                 onClick={() =>
                   setOpened({
@@ -154,7 +166,11 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
           <div
             /* 浮光牆需要空間才漂得起來，九宮格則是固定的三乘三。 */
             className={`card-pop w-full rounded-xl border border-line surface p-5 ${
-              opened.view === "wall" ? "max-w-md" : "max-w-sm"
+              opened.view === "wall"
+                ? "max-w-md"
+                : opened.view === "card"
+                  ? "max-w-md"
+                  : "max-w-sm"
             }`}
             onClick={(ev) => ev.stopPropagation()}
           >
@@ -185,8 +201,25 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   用參與者端同一個 CardDisplay，理由跟浮光牆一樣：
                   審核違規頭像或暱稱時，看到的必須是別人看到的那一面。
                   卡面顏色也照本人的選擇呈現，不套後台的介面主題。
+
+                  key 綁 id：換一個人時要重新掛載，動畫才會重播。
+                  沒有它的話 React 會沿用同一個 DOM，第二張卡直接跳出來。
                 */
-                <CardDisplay card={detail.card} />
+                <div className="card-flip" key={opened.id}>
+                  <div className="card-flip-inner">
+                    <div
+                      className="card-flip-face card-flip-back"
+                      aria-hidden="true"
+                    >
+                      <span className="px text-glow-neon text-xs tracking-[0.35em] text-neon">
+                        NCUIM
+                      </span>
+                    </div>
+                    <div className="card-flip-face card-shine rounded-xl">
+                      <CardDisplay card={detail.card} />
+                    </div>
+                  </div>
+                </div>
               ) : opened.view === "showcase" ? (
                 <div className="grid grid-cols-3 gap-2">
                   {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {

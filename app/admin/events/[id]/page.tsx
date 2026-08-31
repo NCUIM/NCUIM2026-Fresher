@@ -139,6 +139,7 @@ export default async function EventAdminPage(
         initial={participants}
         eventName={event.name}
         archived={event.status === "ARCHIVED"}
+        scanningOpen={event.scanningOpen}
       />
 
       {usingDefaultPassword && (

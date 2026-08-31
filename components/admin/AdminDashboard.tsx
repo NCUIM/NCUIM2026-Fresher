@@ -81,14 +81,18 @@ export function AdminDashboard({
   initial,
   eventName,
   archived,
+  scanningOpen,
 }: {
   eventId: string;
   initial: Participant[];
   eventName: string;
   archived: boolean;
+  /** 是否開放互相掃描收集。與封存無關，封存會另外把兩者都關掉。 */
+  scanningOpen: boolean;
 }) {
   const [participants, setParticipants] = useState(initial);
   const [isArchived, setIsArchived] = useState(archived);
+  const [canScan, setCanScan] = useState(scanningOpen);
   const [announcement, setAnnouncement] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [rescue, setRescue] = useState<{ nickname: string; url: string } | null>(null);
@@ -167,6 +171,30 @@ export function AdminDashboard({
       ),
     );
     setNotice(`已清除 ${p.nickname} 的違規內容`);
+  }
+
+  /*
+    暫停／開放收集。與封存刻意分成兩顆按鈕，因為它們的可逆性不同：
+    這一顆是活動當天會來回切的開關，封存那顆是宣告活動結束。
+
+    沒有二次確認，理由同 EventOverview——會反覆按的東西每次都跳確認，
+    只會訓練出無視確認框的習慣。
+  */
+  async function toggleScanning() {
+    const next = !canScan;
+    const res = await fetch(`/api/admin/events/${eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scanningOpen: next }),
+    });
+    if (!res.ok) {
+      setNotice("切換收集狀態失敗");
+      return;
+    }
+    setCanScan(next);
+    setNotice(
+      next ? "已開放收集，大家可以開始互相掃描" : "已暫停收集，報到仍然開著",
+    );
   }
 
   async function archive() {
@@ -276,6 +304,31 @@ export function AdminDashboard({
             關閉
           </button>
         </div>
+      )}
+
+      {/*
+        放在「結束活動」上方而不是跟它並列：這是活動進行中會用到的開關，
+        而封存是活動結束時才按的。順序照著時間走，最常用的在前面。
+      */}
+      {!isArchived && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-medium">收集開關</h2>
+          <p className="text-xs text-faint">
+            {canScan
+              ? "現在可以互相掃描收集卡片。"
+              : "收集已暫停，但報到仍然開著——大家進得來，只是還不能開始掃。"}
+          </p>
+          <button
+            onClick={toggleScanning}
+            className={`tap-target rounded-lg border py-3 text-sm font-medium transition-colors ${
+              canScan
+                ? "border-line text-dim hover:border-flare/60 hover:text-flare"
+                : "border-neon text-neon hover:bg-neon/10"
+            }`}
+          >
+            {canScan ? "暫停收集" : "開放收集"}
+          </button>
+        </section>
       )}
 
       {!isArchived && (

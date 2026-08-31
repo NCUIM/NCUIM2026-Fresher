@@ -13,7 +13,9 @@ import { WarRoom } from "@/components/admin/WarRoom";
  * 這一頁是給筆電或投影螢幕看的，因此不用手機那套 max-w-md 版面，
  * 而是滿版左右分欄。
  */
-export default async function WarRoomPage() {
+export default async function WarRoomPage(
+  props: PageProps<"/admin/events/warroom">,
+) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
@@ -57,5 +59,15 @@ export default async function WarRoomPage() {
     );
   }
 
-  return <WarRoom events={events} initialEventId={events[0].id} />;
+  /*
+    從活動後台點進來時帶著 ?eventId=，落在那一場而不是清單第一場。
+
+    要對照 events 才採用：那份清單已經按權限過濾過，所以這一步同時
+    擋掉了用網址指定別人場次的可能——不是額外的檢查，是沿用同一份事實。
+  */
+  const { eventId } = await props.searchParams;
+  const requested = typeof eventId === "string" ? eventId : undefined;
+  const initial = events.find((e) => e.id === requested)?.id ?? events[0].id;
+
+  return <WarRoom events={events} initialEventId={initial} />;
 }

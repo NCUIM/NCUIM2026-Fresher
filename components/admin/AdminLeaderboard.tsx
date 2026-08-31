@@ -22,9 +22,44 @@ type Detail = {
   showcase: { position: number; nickname: string; avatarUrl: string | null }[];
 };
 
+/**
+ * 「展示」裡的一欄。
+ *
+ * 三欄共用同一組欄頭，是為了讓它們讀起來像同一件事的三個面向，
+ * 而不是三個各自為政的區塊——那條漸淡的細線就是在做這件事。
+ */
+function Panel({
+  label,
+  title,
+  children,
+}: {
+  label: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex min-w-0 flex-col gap-3">
+      <header className="flex items-center gap-2.5">
+        <span className="px text-[10px] tracking-[0.3em] text-neon/80">
+          {label}
+        </span>
+        <span className="text-xs text-faint">{title}</span>
+        <span
+          aria-hidden="true"
+          className="h-px flex-1 bg-gradient-to-r from-line to-transparent"
+        />
+      </header>
+      {children}
+    </section>
+  );
+}
+
 type Opened = {
   id: string;
   nickname: string;
+  /** 名次與分數帶進彈窗，開著時仍看得出這是誰、排第幾。 */
+  rank: number;
+  score: number;
   view: "card" | "showcase" | "wall" | "all";
 };
 
@@ -87,24 +122,34 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
     各自只顯示一個——同樣的東西寫兩次，改了一邊忘了另一邊，後台看到的
     就會跟參與者看到的不一致，而那正是這一頁存在的理由。
   */
-  const cardBlock = detail && (
-    /*
-      key 綁 id：換一個人時要重新掛載，翻牌動畫才會重播。
-      沒有它的話 React 會沿用同一個 DOM，第二張卡直接跳出來。
-    */
-    <div className="card-flip" key={`card-${opened?.id}`}>
-      <div className="card-flip-inner">
-        <div className="card-flip-face card-flip-back" aria-hidden="true">
-          <span className="px text-glow-neon text-xs tracking-[0.35em] text-neon">
-            NCUIM
-          </span>
-        </div>
-        <div className="card-flip-face card-shine rounded-xl">
-          <CardDisplay card={detail.card} />
+  /*
+    key 綁 id：換一個人時要重新掛載，翻牌動畫才會重播。
+    沒有它的話 React 會沿用同一個 DOM，第二張卡直接跳出來。
+
+    --card-accent 把卡片主人選的顏色交給 CSS，背光才會是他的顏色而不是
+    固定的霓虹綠——卡面顏色是他對外呈現的一部分。
+  */
+  const renderCard = (size: "normal" | "large") =>
+    detail && (
+      <div
+        key={`card-${opened?.id}-${size}`}
+        className="card-flip card-backlight"
+        style={
+          { "--card-accent": detail.card.color.accent } as React.CSSProperties
+        }
+      >
+        <div className="card-flip-inner">
+          <div className="card-flip-face card-flip-back" aria-hidden="true">
+            <span className="px text-glow-neon text-xs tracking-[0.35em] text-neon">
+              NCUIM
+            </span>
+          </div>
+          <div className="card-flip-face card-shine rounded-xl">
+            <CardDisplay card={detail.card} size={size} />
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 
   const showcaseBlock = detail && (
     <div className="grid grid-cols-3 gap-2">
@@ -194,6 +239,8 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   setOpened({
                     id: e.participantId,
                     nickname: e.nickname,
+                    rank: e.rank,
+                    score: e.score,
                     view: "all",
                   })
                 }
@@ -206,6 +253,8 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   setOpened({
                     id: e.participantId,
                     nickname: e.nickname,
+                    rank: e.rank,
+                    score: e.score,
                     view: "card",
                   })
                 }
@@ -218,6 +267,8 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   setOpened({
                     id: e.participantId,
                     nickname: e.nickname,
+                    rank: e.rank,
+                    score: e.score,
                     view: "showcase",
                   })
                 }
@@ -230,6 +281,8 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   setOpened({
                     id: e.participantId,
                     nickname: e.nickname,
+                    rank: e.rank,
+                    score: e.score,
                     view: "wall",
                   })
                 }
@@ -244,25 +297,37 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
 
       {opened && (
         <div
-          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-void/85 p-5 backdrop-blur-sm"
+          /*
+            上緣對齊而不是垂直置中。置中在內容比視窗高時會把上緣切掉，
+            而且捲不回去——「展示」三欄一起顯示時一定會遇到。
+            內容不高時由 my-auto 補回置中的視覺效果。
+          */
+          className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-void/85 p-5 backdrop-blur-sm"
           onClick={() => setOpened(null)}
           role="dialog"
           aria-modal="true"
         >
           <div
             /* 浮光牆需要空間才漂得起來，九宮格則是固定的三乘三。 */
-            className={`card-pop w-full rounded-xl border border-line surface p-5 ${
+            className={`card-pop my-auto w-full rounded-xl border border-line surface p-5 ${
               opened.view === "all"
-                ? "max-w-5xl"
+                ? "max-w-6xl"
                 : opened.view === "showcase"
                   ? "max-w-sm"
                   : "max-w-md"
             }`}
             onClick={(ev) => ev.stopPropagation()}
           >
-            <div className="flex items-baseline justify-between">
-              <h3 className="font-bold">
-                {opened.nickname} 的{VIEW_LABEL[opened.view]}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+              <h3 className="flex flex-wrap items-baseline gap-2.5">
+                <span className="px text-sm font-bold text-neon">
+                  {String(opened.rank).padStart(2, "0")}
+                </span>
+                <span className="text-base font-black">{opened.nickname}</span>
+                <span className="px text-sm text-neon">{opened.score}</span>
+                <span className="text-xs text-faint">
+                  {VIEW_LABEL[opened.view]}
+                </span>
               </h3>
               <button
                 onClick={() => setOpened(null)}
@@ -279,34 +344,24 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                 <p className="text-sm text-faint">讀取中…</p>
               ) : opened.view === "all" ? (
                 /*
-                  兩欄而不是三欄：卡片與九宮格都是「有固定高度的方塊」，
-                  浮光牆則要吃掉整個縱向空間才漂得起來。把前兩者疊在左邊，
-                  右邊整條留給牆，三者的高度才配得上。
+                  由左至右：他選了誰 → 他是誰 → 別人怎麼說他。
+                  三欄寬度不等分，因為它們要的空間不同——九宮格是正方形，
+                  給太寬只會把格子撐成巨大的方塊；浮光牆最需要橫向空間，
+                  字柱才漂得開。
                 */
-                <div className="grid gap-5 lg:grid-cols-2">
-                  <div className="flex flex-col gap-5">
-                    <section className="flex flex-col gap-2">
-                      <h4 className="px text-[11px] tracking-[0.25em] text-faint">
-                        CARD
-                      </h4>
-                      {cardBlock}
-                    </section>
-                    <section className="flex flex-col gap-2">
-                      <h4 className="px text-[11px] tracking-[0.25em] text-faint">
-                        SHOWCASE
-                      </h4>
-                      {showcaseBlock}
-                    </section>
-                  </div>
-                  <section className="flex min-w-0 flex-col gap-2">
-                    <h4 className="px text-[11px] tracking-[0.25em] text-faint">
-                      WALL
-                    </h4>
+                <div className="grid gap-7 lg:grid-cols-[0.72fr_1.28fr_1.15fr]">
+                  <Panel label="SHOWCASE" title="九宮格">
+                    {showcaseBlock}
+                  </Panel>
+                  <Panel label="CARD" title="個人卡片">
+                    {renderCard("large")}
+                  </Panel>
+                  <Panel label="WALL" title="浮光牆">
                     {wallBlock}
-                  </section>
+                  </Panel>
                 </div>
               ) : opened.view === "card" ? (
-                cardBlock
+                renderCard("normal")
               ) : opened.view === "showcase" ? (
                 showcaseBlock
               ) : (

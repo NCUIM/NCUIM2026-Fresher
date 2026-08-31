@@ -490,10 +490,25 @@ body::before {
   perspective: 1400px;
 }
 
+/* 兩面疊在同一個 grid 格子裡，不用絕對定位。
+
+   絕對定位的背面沒有尺寸依據，容器高度只由正面決定——而卡片的高度隨
+   自我介紹、圖示、星座有無而變，同一排並列時會參差不齊。用 grid 疊層
+   則容器取兩面的較大者，再加一個下限，高度就固定了。 */
 .card-flip-inner {
-  position: relative;
+  display: grid;
+  min-height: 26rem;
   transform-style: preserve-3d;
   animation: card-flip 720ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+.card-flip-face {
+  grid-area: 1 / 1;
+}
+
+/* 讓 CardDisplay 撐滿固定高度，而不是縮在上緣。 */
+.card-flip-face > * {
+  height: 100%;
 }
 
 /* 從 180 度起手，所以第一眼看到的是背面。scale 讓它同時往前推進來，
@@ -516,8 +531,6 @@ body::before {
 }
 
 .card-flip-back {
-  position: absolute;
-  inset: 0;
   transform: rotateY(180deg);
   display: grid;
   place-items: center;
@@ -530,6 +543,46 @@ body::before {
       transparent 10px 20px
     ),
     var(--color-slate);
+}
+
+/* 背光：卡片後方的一團光暈。
+
+   顏色取卡片主人自己選的 accent（由 JS 用 --card-accent 帶進來），不是
+   固定的霓虹綠——卡面顏色是他對外呈現的一部分，背光跟著它才成立。
+   沒帶值時退回介面的霓虹色。
+
+   inset 為負讓光暈溢出卡片邊界，blur 再把邊緣化開；緩慢的呼吸讓它看起來
+   像光源而不是一張貼在後面的圖。 */
+.card-backlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.card-backlight::before {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--card-accent, var(--color-neon)) 55%, transparent),
+    transparent 72%
+  );
+  filter: blur(34px);
+  animation: card-backlight 4.5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes card-backlight {
+  from {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 0.95;
+    transform: scale(1.05);
+  }
 }
 
 /* 翻正之後掠過一道光。時間比翻牌長一點點，讓它接在動作末尾而不是同時發生。 */
@@ -601,6 +654,11 @@ body::before {
   .card-shine::after {
     animation: none;
     opacity: 0;
+  }
+  /* 背光保留，只停掉呼吸——它是版面的一部分，不只是動態效果。 */
+  .card-backlight::before {
+    animation: none;
+    opacity: 0.7;
   }
 }
 

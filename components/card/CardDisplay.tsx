@@ -9,14 +9,23 @@ export function CardDisplay({
   card,
   tone = "neutral",
   eventName,
+  size = "normal",
 }: {
   card: CardView;
   /** flare 用於剛收集到的那一刻，其餘場合維持中性。 */
   tone?: "neutral" | "flare";
   /** 卡面上的場次標記。只有完整卡片需要，小格子放不下也不需要。 */
   eventName?: string;
+  /**
+   * large 用於後台「展示」那種一次看三欄的版面。
+   *
+   * 只放大頭像與暱稱，不放大整張卡：卡片的視覺重量幾乎都在頭像上，
+   * 等比例放大反而會讓自我介紹那段長到不好讀。
+   */
+  size?: "normal" | "large";
 }) {
   const accent = tone === "flare" ? "flare" : "neon";
+  const large = size === "large";
 
   return (
     <article
@@ -49,9 +58,9 @@ export function CardDisplay({
       */}
       <div
         style={tone === "flare" ? undefined : { borderColor: card.color.accent }}
-        className={`w-full max-w-[220px] rounded-sm border-2 bg-white p-2 ${
-          tone === "flare" ? "border-flare" : ""
-        }`}
+        className={`w-full rounded-sm border-2 bg-white p-2 ${
+          large ? "max-w-[300px]" : "max-w-[220px]"
+        } ${tone === "flare" ? "border-flare" : ""}`}
       >
         <Avatar
           src={card.avatarUrl}
@@ -62,7 +71,9 @@ export function CardDisplay({
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
-        <h2 className="text-lg font-black">{card.nickname}</h2>
+        <h2 className={`font-black ${large ? "text-2xl" : "text-lg"}`}>
+          {card.nickname}
+        </h2>
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           {card.role === "STAFF" && (
             <span className="px rounded-sm border border-moon px-2 py-0.5 text-[10px] text-moon">

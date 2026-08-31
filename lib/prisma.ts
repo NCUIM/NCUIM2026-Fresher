@@ -15,7 +15,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
   自己的連線池，壓力小得多，但仍不該讓單一執行個體無限制地開。
 
   預設 5 而不是 pg 的預設 10：這個 app 的查詢都很短，5 條足夠讓
-  七十人的活動不排隊，同時把撞上資料庫上限的風險壓到最低。
+  百人的活動不排隊，同時把撞上資料庫上限的風險壓到最低。
 */
 const POOL_MAX = Number(process.env.DB_POOL_MAX ?? 5);
 

@@ -56,6 +56,18 @@ model Event {
   /// 對外只會有名次、暱稱、分數，不含真實姓名、信箱或內部 id。
   publicLeaderboard Boolean @default(false)
 
+  /// 是否開放互相掃描收集。
+  ///
+  /// 與 status 正交，兩者關掉的東西不同：
+  ///   status = ARCHIVED   報到與掃描都關，活動結束
+  ///   scanningOpen = false 只關掃描，**報到仍然開著**
+  ///
+  /// 後者是為了「先讓大家陸續報到、主持人宣布開始才准掃」這種流程。
+  /// 用旗標而不是新增一個 EventStatus：報到與掃描是兩件可以獨立開關的事，
+  /// 塞進同一個列舉會變成要窮舉所有組合，而且封存還帶著 archivedAt 與
+  /// purgeAfter 的語意，跟「暫停一下」不是同一個層次的狀態。
+  scanningOpen Boolean @default(true)
+
   createdAt DateTime @default(now())
 
   entryCodes    EntryCode[]

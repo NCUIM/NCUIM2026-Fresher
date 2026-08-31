@@ -8,7 +8,8 @@ export type ScanFailure =
   | "self"
   | "not_found"
   | "different_event"
-  | "archived";
+  | "archived"
+  | "scanning_closed";
 
 export type ScanOutcome =
   | { ok: true; duplicate: boolean; card: CardView }
@@ -19,6 +20,7 @@ export const SCAN_FAILURE_MESSAGE: Record<ScanFailure, string> = {
   not_found: "找不到這張卡片，請確認掃描的是本場活動的個人 QR Code",
   different_event: "這張卡片屬於另一場活動",
   archived: "活動已經結束，無法再收集",
+  scanning_closed: "收集還沒開始，請等主辦方宣布",
 };
 
 /**
@@ -42,6 +44,15 @@ export async function performScan(
 
   if (scanner.event.status !== "ACTIVE") {
     return { ok: false, reason: "archived" };
+  }
+
+  /*
+    掃描的開關與封存分開判斷，訊息也要分開：「活動已經結束」跟
+    「還沒開始」對站在現場的人是完全相反的指示，講錯會讓人以為
+    自己來錯場次或報到失敗。
+  */
+  if (!scanner.event.scanningOpen) {
+    return { ok: false, reason: "scanning_closed" };
   }
 
   const target = await prisma.participant.findUnique({

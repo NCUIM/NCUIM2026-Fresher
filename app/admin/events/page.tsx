@@ -32,6 +32,7 @@ export default async function EventsPage() {
         basePoints: true,
         leaderboardTopN: true,
         publicLeaderboard: true,
+        scanningOpen: true,
         _count: {
           select: { participants: true, teams: true, achievements: true },
         },

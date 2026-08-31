@@ -38,6 +38,13 @@ const patchSchema = z.object({
   makeActive: z.boolean().optional(),
   /** 指派主持人。僅總管理員。傳入的清單會整批取代原有的指派。 */
   hostIds: z.array(z.string()).optional(),
+  /**
+   * 開關互相掃描收集。報到不受影響——那是封存在管的。
+   *
+   * 主持人也能用：這是活動當天會即時切換的東西（「大家先報到，等等
+   * 我喊開始」），要求找總管理員等於讓流程卡在通訊軟體上。
+   */
+  scanningOpen: z.boolean().optional(),
 });
 
 /**
@@ -95,6 +102,20 @@ export async function PATCH(
         skipDuplicates: true,
       }),
     ]);
+  }
+
+  if (parsed.data.scanningOpen !== undefined) {
+    // 與 makeActive 同一道檢查：指派可能剛被取消。
+    if (!(await canAccessEvent(admin, id))) {
+      return NextResponse.json(
+        { error: "你沒有這場活動的權限" },
+        { status: 403 },
+      );
+    }
+    await prisma.event.update({
+      where: { id },
+      data: { scanningOpen: parsed.data.scanningOpen },
+    });
   }
 
   if (parsed.data.makeActive) {

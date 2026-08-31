@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { canAccessEvent, getCurrentAdmin } from "@/lib/admin-session";
 import { getReceivedImpressions } from "@/lib/wall";
 import { getShowcase } from "@/lib/showcase";
+import { toCardView } from "@/lib/cards";
 
 /**
  * 一位參與者的浮光牆與九宮格，供 Admin 審核。
@@ -25,9 +26,14 @@ export async function GET(
 
   const { id } = await ctx.params;
 
+  /*
+    取完整紀錄而不是挑三個欄位：卡片要的是本人此刻的 Profile
+    （頭像、圖示、自我介紹、組別、卡面顏色），跟九宮格裡那些縮圖
+    不是同一份資料。include team 是 toCardView 的前提。
+  */
   const target = await prisma.participant.findUnique({
     where: { id },
-    select: { id: true, nickname: true, eventId: true },
+    include: { team: true },
   });
   // 無權與不存在回同一個 404，否則可以拿 id 探測別場有哪些人。
   if (!target || !(await canAccessEvent(admin, target.eventId))) {
@@ -41,6 +47,11 @@ export async function GET(
 
   return NextResponse.json({
     nickname: target.nickname,
+    /*
+      與參與者端同一個 CardView，讓後台看到的就是本人對外的那一面。
+      審核違規頭像或暱稱時，看到的必須跟檢舉人看到的一致。
+    */
+    card: toCardView(target),
     wall,
     showcase: showcase.map((s) => ({
       position: s.position,

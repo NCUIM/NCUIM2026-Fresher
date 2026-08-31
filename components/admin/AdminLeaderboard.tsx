@@ -5,6 +5,8 @@ import { SHOWCASE_SIZE } from "@/lib/validation";
 import { FloatingWall } from "@/components/wall/FloatingWall";
 import type { WallImpression } from "@/lib/wall";
 import { Avatar } from "@/components/card/Avatar";
+import { CardDisplay } from "@/components/card/CardDisplay";
+import type { CardView } from "@/lib/cards";
 
 type Entry = {
   rank: number;
@@ -15,11 +17,16 @@ type Entry = {
 
 type Detail = {
   nickname: string;
+  card: CardView;
   wall: WallImpression[];
   showcase: { position: number; nickname: string; avatarUrl: string | null }[];
 };
 
-type Opened = { id: string; nickname: string; view: "showcase" | "wall" };
+type Opened = {
+  id: string;
+  nickname: string;
+  view: "card" | "showcase" | "wall";
+};
 
 /**
  * 後台的完整排名。
@@ -27,8 +34,9 @@ type Opened = { id: string; nickname: string; view: "showcase" | "wall" };
  * 與參與者端有兩個差別：不截斷（後台要掌握全場，不是保護最後一名的心情），
  * 而且每一列可以彈出那個人的九宮格與浮光牆。
  *
- * 兩者分成獨立按鈕而不是一次全攤開：它們是不同的東西——九宮格是他選了誰，
- * 浮光牆是別人怎麼說他——而且浮光牆是私人內容，要看的人得明確按下去。
+ * 三者分成獨立按鈕而不是一次全攤開：它們是不同的東西——卡片是他怎麼呈現
+ * 自己，九宮格是他選了誰，浮光牆是別人怎麼說他——而且浮光牆是私人內容，
+ * 要看的人得明確按下去。
  */
 export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
   const [opened, setOpened] = useState<Opened | null>(null);
@@ -100,6 +108,18 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   setOpened({
                     id: e.participantId,
                     nickname: e.nickname,
+                    view: "card",
+                  })
+                }
+                className="tap-target flex-1 rounded-lg border-2 border-line px-3 py-1.5 text-xs font-medium transition-colors hover:border-neon hover:bg-neon/10 hover:text-neon"
+              >
+                卡片
+              </button>
+              <button
+                onClick={() =>
+                  setOpened({
+                    id: e.participantId,
+                    nickname: e.nickname,
                     view: "showcase",
                   })
                 }
@@ -141,7 +161,11 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
             <div className="flex items-baseline justify-between">
               <h3 className="font-bold">
                 {opened.nickname} 的
-                {opened.view === "showcase" ? "九宮格" : "浮光牆"}
+                {opened.view === "card"
+                  ? "卡片"
+                  : opened.view === "showcase"
+                    ? "九宮格"
+                    : "浮光牆"}
               </h3>
               <button
                 onClick={() => setOpened(null)}
@@ -156,6 +180,13 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                 <p className="text-sm text-flare">{error}</p>
               ) : !detail ? (
                 <p className="text-sm text-faint">讀取中…</p>
+              ) : opened.view === "card" ? (
+                /*
+                  用參與者端同一個 CardDisplay，理由跟浮光牆一樣：
+                  審核違規頭像或暱稱時，看到的必須是別人看到的那一面。
+                  卡面顏色也照本人的選擇呈現，不套後台的介面主題。
+                */
+                <CardDisplay card={detail.card} />
               ) : opened.view === "showcase" ? (
                 <div className="grid grid-cols-3 gap-2">
                   {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {

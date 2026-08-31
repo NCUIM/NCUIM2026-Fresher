@@ -10,6 +10,7 @@ type EventRow = {
   status: string;
   startsAt: string;
   publicLeaderboard: boolean;
+  scanningOpen: boolean;
   archivedAt: string | null;
   purgeAfter: string | null;
   teamCount: number;
@@ -127,6 +128,37 @@ export function EventOverview({
     }
   }
 
+  /*
+    暫停掃描而不封存。
+
+    活動當天的實際流程是「人陸續進場報到 → 主持人說明規則 → 宣布開始」，
+    中間那段時間報到必須開著、收集必須關著。封存做不到這件事，它把兩者
+    一起關掉。
+
+    沒有二次確認：這是會在活動中來回切換的開關，不是一次性的破壞動作，
+    每次都跳確認框只會讓人養成無視它的習慣——而封存那顆確實需要確認。
+  */
+  async function toggleScanning(e: EventRow) {
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/events/${e.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scanningOpen: !e.scanningOpen }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError("切換掃描狀態失敗");
+      return;
+    }
+    setNotice(
+      e.scanningOpen
+        ? `已暫停「${e.name}」的收集，報到仍然開著`
+        : `已開放「${e.name}」的收集`,
+    );
+    router.refresh();
+  }
+
   async function toggleArchive(e: EventRow) {
     const archiving = e.status === "ACTIVE";
     if (
@@ -226,6 +258,16 @@ export function EventOverview({
                     已封存
                   </span>
                 )}
+                {/*
+                  掃描被暫停時一定要看得見。這個狀態下報到照常運作，
+                  所以「大家都進得來卻掃不了」的回報會先被當成程式壞掉，
+                  而不是有人按了這顆按鈕。
+                */}
+                {e.status === "ACTIVE" && !e.scanningOpen && (
+                  <span className="rounded-full border border-flare px-2 py-0.5 text-[10px] text-flare">
+                    收集暫停
+                  </span>
+                )}
                 {/* 哪幾場是對外公開的，要在清單上就看得出來。 */}
                 {e.publicLeaderboard && (
                   <span className="rounded-full border border-moon px-2 py-0.5 text-[10px] text-moon">
@@ -267,6 +309,20 @@ export function EventOverview({
                 >
                   指派主持人
                 </button>
+                {/* 封存的活動沒有「暫停收集」可言，那顆按鈕會誤導。 */}
+                {e.status === "ACTIVE" && (
+                  <button
+                    onClick={() => toggleScanning(e)}
+                    disabled={busy}
+                    className={`tap-target rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${
+                      e.scanningOpen
+                        ? "border-line hover:border-flare hover:bg-flare/10 hover:text-flare"
+                        : "border-flare text-flare hover:bg-flare/10"
+                    }`}
+                  >
+                    {e.scanningOpen ? "暫停收集" : "開放收集"}
+                  </button>
+                )}
                 <button
                   onClick={() => toggleArchive(e)}
                   disabled={busy}

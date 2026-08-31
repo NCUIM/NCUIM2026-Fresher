@@ -49,7 +49,14 @@ function Panel({
           className="h-px flex-1 bg-gradient-to-r from-line to-transparent"
         />
       </header>
-      {children}
+      {/*
+        flex-1 讓三欄的內容區一樣高（grid 預設就會把列拉齊），
+        items-center 再把各自的內容擺到中間——三者的自然高度差很多，
+        不置中的話會全部貼齊上緣，右邊那欄下方拖出一大塊空白。
+      */}
+      <div className="flex flex-1 items-center">
+        <div className="w-full">{children}</div>
+      </div>
     </section>
   );
 }
@@ -151,32 +158,38 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
       </div>
     );
 
+  /*
+    背光包在外層、掃光包在內層，不能疊在同一個元素上：
+    掃光需要 overflow: hidden 才不會溢出，而那會把往外擴散的背光切掉。
+  */
   const showcaseBlock = detail && (
-    <div className="grid grid-cols-3 gap-2">
-      {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {
-        const s = bySlot.get(i);
-        return (
-          <div
-            key={i}
-            className={`grid aspect-square place-items-center overflow-hidden rounded-lg border text-[10px] ${
-              s
-                ? "border-neon bg-slate text-neon"
-                : "border-dashed border-line text-faint"
-            }`}
-          >
-            {s ? (
-              <Avatar
-                src={s.avatarUrl}
-                nickname={s.nickname}
-                className="size-full text-[10px]"
-                rounded="rounded-none"
-              />
-            ) : (
-              <span className="px">{String(i + 1).padStart(2, "0")}</span>
-            )}
-          </div>
-        );
-      })}
+    <div className="card-backlight">
+      <div className="card-shine grid grid-cols-3 gap-2 rounded-xl">
+        {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {
+          const s = bySlot.get(i);
+          return (
+            <div
+              key={i}
+              className={`grid aspect-square place-items-center overflow-hidden rounded-lg border text-[10px] ${
+                s
+                  ? "border-neon bg-slate text-neon"
+                  : "border-dashed border-line text-faint"
+              }`}
+            >
+              {s ? (
+                <Avatar
+                  src={s.avatarUrl}
+                  nickname={s.nickname}
+                  className="size-full text-[10px]"
+                  rounded="rounded-none"
+                />
+              ) : (
+                <span className="px">{String(i + 1).padStart(2, "0")}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -187,7 +200,11 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
     唯讀模式下隱藏的內容仍留在牆上並標示，那正是要看的東西。
   */
   const wallBlock = detail && (
-    <FloatingWall impressions={detail.wall} purgeDate={null} readOnly />
+    <div className="card-backlight">
+      <div className="card-shine rounded-xl">
+        <FloatingWall impressions={detail.wall} purgeDate={null} readOnly />
+      </div>
+    </div>
   );
 
   return (
@@ -349,7 +366,24 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   給太寬只會把格子撐成巨大的方塊；浮光牆最需要橫向空間，
                   字柱才漂得開。
                 */
-                <div className="grid gap-7 lg:grid-cols-[0.72fr_1.28fr_1.15fr]">
+                <div
+                  /*
+                    九宮格與浮光牆等寬，中間的卡片略寬。
+
+                    九宮格是 3×3 的正方格，寬度直接決定格子大小——先前給
+                    0.72fr 讓它縮成一排小方塊，右邊卻有大片空白。與牆等寬
+                    之後兩側的重量才平衡。
+
+                    --card-accent 放在這一層而不是各自帶：三欄講的是同一
+                    個人，背光用同一個顏色才像一整面板子。
+                  */
+                  className="grid gap-7 lg:grid-cols-[1fr_1.2fr_1fr]"
+                  style={
+                    {
+                      "--card-accent": detail.card.color.accent,
+                    } as React.CSSProperties
+                  }
+                >
                   <Panel label="SHOWCASE" title="九宮格">
                     {showcaseBlock}
                   </Panel>

@@ -20,7 +20,25 @@ WORKDIR /app
 
 # 只複製 lock 檔，讓這一層在原始碼變動時仍能命中快取。
 COPY package.json package-lock.json ./
-RUN npm ci
+
+# 用 npm install 而不是 npm ci。
+#
+# npm ci 要求 lockfile 與 package.json **完全**同步，否則直接拒絕執行。
+# 而這份 lockfile 是在 Windows 上產生的，npm 會把「不適用於當下平台」的
+# optional dependencies 從 lock 裡剪掉——於是在 Alpine(musl) 上建置時，
+# sharp 與 Tailwind 的 wasm32 套件底下那些 @emnapi/* 就變成「缺少」：
+#
+#   npm error `npm ci` can only install packages when your package.json
+#   and package-lock.json ... are in sync.
+#   npm error Missing: @emnapi/core@1.11.3 from lock file
+#
+# 補 lockfile 治不了根：--os=linux --libc=musl 能補回 @emnapi/runtime，
+# 但 @emnapi/core 掛在 wasm32-wasi 平台底下，那些旗標構不到。
+#
+# npm install 仍然會**遵守 lockfile 已記錄的版本**，只針對缺少的 optional
+# 套件另外解析。代價是那幾個套件沒有鎖版本——對一個一次性活動可以接受，
+# 換來的是本機（Windows）與建置（Alpine）能共用同一份 lockfile。
+RUN npm install --no-audit --no-fund
 
 
 # ── 2. 建置 ─────────────────────────────────────────────────

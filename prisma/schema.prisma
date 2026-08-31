@@ -66,7 +66,19 @@ model Event {
   /// 用旗標而不是新增一個 EventStatus：報到與掃描是兩件可以獨立開關的事，
   /// 塞進同一個列舉會變成要窮舉所有組合，而且封存還帶著 archivedAt 與
   /// purgeAfter 的語意，跟「暫停一下」不是同一個層次的狀態。
-  scanningOpen Boolean @default(true)
+  ///
+  /// **預設關閉。** 實際流程是「人陸續進場報到 → 主持人說明規則 → 宣布開始」，
+  /// 開著建立活動等於一有人報到就能開始掃，而那通常早於主持人想要的時機。
+  /// 忘記關的代價（遊戲提早開始、限時成就被浪費）比忘記開大得多——後者
+  /// 在現場一秒就會有人反映。
+  scanningOpen Boolean @default(false)
+
+  /// 最近一次開放掃描的時刻。限時成就（「早鳥」）由它起算，而不是 startsAt。
+  ///
+  /// 兩者不同的理由：報到通常比開放收集早半小時以上，用 startsAt 起算的話
+  /// 十五分鐘的窗口在還不能掃的時候就過完了——那個成就會變成沒有人拿得到。
+  /// 尚未開放過時為 null，此時退回 startsAt。
+  scanningOpenedAt DateTime?
 
   createdAt DateTime @default(now())
 

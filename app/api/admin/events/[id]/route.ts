@@ -112,9 +112,17 @@ export async function PATCH(
         { status: 403 },
       );
     }
+    /*
+      開放時記下時刻，限時成就由它起算（見 lib/achievements.ts 的 EARLY_SCAN）。
+      關閉時不清除：清掉的話中途暫停再開，「早鳥」的窗口就會重新計時，
+      而暫停通常是為了插播說明，不是重新開始一場活動。
+    */
     await prisma.event.update({
       where: { id },
-      data: { scanningOpen: parsed.data.scanningOpen },
+      data: {
+        scanningOpen: parsed.data.scanningOpen,
+        ...(parsed.data.scanningOpen ? { scanningOpenedAt: new Date() } : {}),
+      },
     });
   }
 

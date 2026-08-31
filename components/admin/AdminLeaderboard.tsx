@@ -25,7 +25,14 @@ type Detail = {
 type Opened = {
   id: string;
   nickname: string;
-  view: "card" | "showcase" | "wall";
+  view: "card" | "showcase" | "wall" | "all";
+};
+
+const VIEW_LABEL: Record<Opened["view"], string> = {
+  card: "卡片",
+  showcase: "九宮格",
+  wall: "浮光牆",
+  all: "全部",
 };
 
 /**
@@ -75,6 +82,69 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
 
   const bySlot = new Map((detail?.showcase ?? []).map((s) => [s.position, s]));
 
+  /*
+    三個區塊抽出來，因為「展示」會把它們排在一起，而單獨的三顆按鈕
+    各自只顯示一個——同樣的東西寫兩次，改了一邊忘了另一邊，後台看到的
+    就會跟參與者看到的不一致，而那正是這一頁存在的理由。
+  */
+  const cardBlock = detail && (
+    /*
+      key 綁 id：換一個人時要重新掛載，翻牌動畫才會重播。
+      沒有它的話 React 會沿用同一個 DOM，第二張卡直接跳出來。
+    */
+    <div className="card-flip" key={`card-${opened?.id}`}>
+      <div className="card-flip-inner">
+        <div className="card-flip-face card-flip-back" aria-hidden="true">
+          <span className="px text-glow-neon text-xs tracking-[0.35em] text-neon">
+            NCUIM
+          </span>
+        </div>
+        <div className="card-flip-face card-shine rounded-xl">
+          <CardDisplay card={detail.card} />
+        </div>
+      </div>
+    </div>
+  );
+
+  const showcaseBlock = detail && (
+    <div className="grid grid-cols-3 gap-2">
+      {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {
+        const s = bySlot.get(i);
+        return (
+          <div
+            key={i}
+            className={`grid aspect-square place-items-center overflow-hidden rounded-lg border text-[10px] ${
+              s
+                ? "border-neon bg-slate text-neon"
+                : "border-dashed border-line text-faint"
+            }`}
+          >
+            {s ? (
+              <Avatar
+                src={s.avatarUrl}
+                nickname={s.nickname}
+                className="size-full text-[10px]"
+                rounded="rounded-none"
+              />
+            ) : (
+              <span className="px">{String(i + 1).padStart(2, "0")}</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  /*
+    用參與者端同一個元件呈現，而不是另外排一份清單。
+    審核時看到的必須是本人看到的那一面牆——排版不同的話，
+    「他說的那則」與「我看到的那則」就對不起來。
+    唯讀模式下隱藏的內容仍留在牆上並標示，那正是要看的東西。
+  */
+  const wallBlock = detail && (
+    <FloatingWall impressions={detail.wall} purgeDate={null} readOnly />
+  );
+
   return (
     <>
       <div className="flex items-baseline justify-between">
@@ -115,6 +185,22 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
             <span className="px shrink-0 text-sm text-neon">{e.score}</span>
 
             <span className="flex w-full gap-2 sm:w-auto sm:flex-1 sm:justify-end">
+              {/*
+                「展示」用實心的霓虹邊框跟其餘三顆分開：它不是第四種內容，
+                而是「一次看完」——放在最前面，讓多數情況一顆就夠。
+              */}
+              <button
+                onClick={() =>
+                  setOpened({
+                    id: e.participantId,
+                    nickname: e.nickname,
+                    view: "all",
+                  })
+                }
+                className="tap-target flex-1 rounded-lg border-2 border-neon/70 bg-neon/10 px-3 py-1.5 text-xs font-bold text-neon transition-colors hover:bg-neon hover:text-void"
+              >
+                展示
+              </button>
               <button
                 onClick={() =>
                   setOpened({
@@ -166,22 +252,17 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
           <div
             /* 浮光牆需要空間才漂得起來，九宮格則是固定的三乘三。 */
             className={`card-pop w-full rounded-xl border border-line surface p-5 ${
-              opened.view === "wall"
-                ? "max-w-md"
-                : opened.view === "card"
-                  ? "max-w-md"
-                  : "max-w-sm"
+              opened.view === "all"
+                ? "max-w-5xl"
+                : opened.view === "showcase"
+                  ? "max-w-sm"
+                  : "max-w-md"
             }`}
             onClick={(ev) => ev.stopPropagation()}
           >
             <div className="flex items-baseline justify-between">
               <h3 className="font-bold">
-                {opened.nickname} 的
-                {opened.view === "card"
-                  ? "卡片"
-                  : opened.view === "showcase"
-                    ? "九宮格"
-                    : "浮光牆"}
+                {opened.nickname} 的{VIEW_LABEL[opened.view]}
               </h3>
               <button
                 onClick={() => setOpened(null)}
@@ -196,71 +277,40 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                 <p className="text-sm text-flare">{error}</p>
               ) : !detail ? (
                 <p className="text-sm text-faint">讀取中…</p>
-              ) : opened.view === "card" ? (
+              ) : opened.view === "all" ? (
                 /*
-                  用參與者端同一個 CardDisplay，理由跟浮光牆一樣：
-                  審核違規頭像或暱稱時，看到的必須是別人看到的那一面。
-                  卡面顏色也照本人的選擇呈現，不套後台的介面主題。
-
-                  key 綁 id：換一個人時要重新掛載，動畫才會重播。
-                  沒有它的話 React 會沿用同一個 DOM，第二張卡直接跳出來。
+                  兩欄而不是三欄：卡片與九宮格都是「有固定高度的方塊」，
+                  浮光牆則要吃掉整個縱向空間才漂得起來。把前兩者疊在左邊，
+                  右邊整條留給牆，三者的高度才配得上。
                 */
-                <div className="card-flip" key={opened.id}>
-                  <div className="card-flip-inner">
-                    <div
-                      className="card-flip-face card-flip-back"
-                      aria-hidden="true"
-                    >
-                      <span className="px text-glow-neon text-xs tracking-[0.35em] text-neon">
-                        NCUIM
-                      </span>
-                    </div>
-                    <div className="card-flip-face card-shine rounded-xl">
-                      <CardDisplay card={detail.card} />
-                    </div>
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <div className="flex flex-col gap-5">
+                    <section className="flex flex-col gap-2">
+                      <h4 className="px text-[11px] tracking-[0.25em] text-faint">
+                        CARD
+                      </h4>
+                      {cardBlock}
+                    </section>
+                    <section className="flex flex-col gap-2">
+                      <h4 className="px text-[11px] tracking-[0.25em] text-faint">
+                        SHOWCASE
+                      </h4>
+                      {showcaseBlock}
+                    </section>
                   </div>
+                  <section className="flex min-w-0 flex-col gap-2">
+                    <h4 className="px text-[11px] tracking-[0.25em] text-faint">
+                      WALL
+                    </h4>
+                    {wallBlock}
+                  </section>
                 </div>
+              ) : opened.view === "card" ? (
+                cardBlock
               ) : opened.view === "showcase" ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: SHOWCASE_SIZE }, (_, i) => {
-                    const s = bySlot.get(i);
-                    return (
-                      <div
-                        key={i}
-                        className={`grid aspect-square place-items-center overflow-hidden rounded-lg border text-[10px] ${
-                          s
-                            ? "border-neon bg-slate text-neon"
-                            : "border-dashed border-line text-faint"
-                        }`}
-                      >
-                        {s ? (
-                          <Avatar
-                            src={s.avatarUrl}
-                            nickname={s.nickname}
-                            className="size-full text-[10px]"
-                            rounded="rounded-none"
-                          />
-                        ) : (
-                          <span className="px">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                showcaseBlock
               ) : (
-                /*
-                  用參與者端同一個元件呈現，而不是另外排一份清單。
-                  審核時看到的必須是本人看到的那一面牆——排版不同的話，
-                  「他說的那則」與「我看到的那則」就對不起來。
-                  唯讀模式下隱藏的內容仍留在牆上並標示，那正是要看的東西。
-                */
-                <FloatingWall
-                  impressions={detail.wall}
-                  purgeDate={null}
-                  readOnly
-                />
+                wallBlock
               )}
             </div>
           </div>

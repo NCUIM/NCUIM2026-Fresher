@@ -79,10 +79,10 @@ export const DEFAULT_ACHIEVEMENTS: AchievementConfig[] = [
   {
     key: "early-bird",
     type: "EARLY_SCAN",
-    threshold: 15, // 活動開始後 15 分鐘內
+    threshold: 15, // 開放收集後 15 分鐘內（見 lib/achievements.ts 的 EARLY_SCAN）
     points: 30,
     hidden: true,
     title: "早鳥",
-    description: "活動開始後 15 分鐘內完成第一次掃描",
+    description: "開放收集後 15 分鐘內完成第一次掃描",
   },
 ];

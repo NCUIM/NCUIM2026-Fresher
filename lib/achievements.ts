@@ -58,7 +58,7 @@ async function measure(
     case "EARLY_SCAN": {
       const event = await prisma.event.findUnique({
         where: { id: me.eventId },
-        select: { startsAt: true },
+        select: { startsAt: true, scanningOpenedAt: true },
       });
       if (!event) return null;
 
@@ -69,10 +69,19 @@ async function measure(
       });
       if (!firstScan) return { current: 0, target: 1 };
 
-      // threshold 的單位是分鐘，不是次數：在時限內完成第一次掃描就算達成。
-      const deadline = new Date(
-        event.startsAt.getTime() + def.threshold * 60_000,
-      );
+      /*
+        從「開放掃描」起算，不是從活動開始。
+
+        報到通常比開放收集早半小時以上（大家陸續進場、主持人說明規則），
+        用 startsAt 起算的話十五分鐘的窗口在還不能掃的時候就過完了——
+        那個成就會變成沒有任何人拿得到，而且不會有任何錯誤訊息。
+
+        沒有開放過就退回 startsAt：舊活動與「一直開著」的場次仍照原本
+        的定義計算。
+        threshold 的單位是分鐘，不是次數：在時限內完成第一次掃描就算達成。
+      */
+      const from = event.scanningOpenedAt ?? event.startsAt;
+      const deadline = new Date(from.getTime() + def.threshold * 60_000);
       return { current: firstScan.createdAt <= deadline ? 1 : 0, target: 1 };
     }
   }

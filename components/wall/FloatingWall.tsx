@@ -442,8 +442,16 @@ export function FloatingWall({
                 同層的每一根平均分配在一整輪裡。負的延遲代表「這一輪已經
                 跑掉的部分」，所以載入時它們就已經散在各處，而不是全部
                 擠在右緣外排隊等進場。
+
+                但 slot / total 單獨用會有一個死角：則數少的時候每一層
+                只有一根，slot 全是 0、total 全是 1，於是三層的字柱相位
+                都是 0——它們會**疊在同一個位置**一起出現。
+
+                所以再加兩項：層與層之間固定錯開，同層之內給一個不超過
+                一格距離的隨機偏移。兩者都由 id 決定，重新整理不會變。
               */
-              const progress = resumed[item.id] ?? slot / total;
+              const spread = (slot + seeded(item.id, 15) * 0.8) / total;
+              const progress = resumed[item.id] ?? (spread + layerIndex * 0.17) % 1;
               const chars = Array.from(item.text);
               // 長句不能讓最後一個字等太久，逐字的間隔隨字數縮短。
               const charStep = Math.min(0.09, 2.2 / Math.max(1, chars.length));
@@ -499,7 +507,13 @@ export function FloatingWall({
                       <span
                         key={i}
                         className="wall-ch"
-                        style={{ animationDelay: `${0.35 + i * charStep}s` }}
+                        /*
+                          每一根的起算點錯開，否則全場的字會在同一瞬間
+                          一起浮現——位置散開了，時間上仍是「一次全出現」。
+                        */
+                        style={{
+                          animationDelay: `${0.35 + seeded(item.id, 16) * 1.1 + i * charStep}s`,
+                        }}
                       >
                         {ch}
                       </span>
@@ -507,7 +521,7 @@ export function FloatingWall({
                     <span
                       className="wall-ch opacity-60"
                       style={{
-                        animationDelay: `${0.35 + chars.length * charStep}s`,
+                        animationDelay: `${0.35 + seeded(item.id, 16) * 1.1 + chars.length * charStep}s`,
                         fontSize: "0.75em",
                       }}
                     >

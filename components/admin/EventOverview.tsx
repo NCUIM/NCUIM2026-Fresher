@@ -29,7 +29,7 @@ const field =
   預設值取「下一個整點或半點」，而不是此刻。
 
   活動不會在 14:37 開始。給一個已經對齊的時間，多數情況直接按下去就對了，
-  不用先把分鐘改掉——而「早鳥」這類限時成就正是從這個時間起算的。
+  不用先把分鐘改掉。
 */
 function nextHalfHour(): Date {
   const d = new Date();
@@ -428,7 +428,8 @@ export function EventOverview({
 
             <span className="text-xs text-neon">{describeDate(draft.startsAt)}</span>
             <span className="text-xs text-faint">
-              「早鳥」這類限時成就是從這個時間起算的。
+              只作為顯示與排序用。「早鳥」這類限時成就是從**開放收集**那一刻
+              起算的，不是這個時間。
             </span>
           </label>
 

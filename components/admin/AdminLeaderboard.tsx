@@ -63,6 +63,30 @@ function Panel({
   );
 }
 
+/*
+  落花的位置與節奏。
+
+  刻意寫死而不用 Math.random()：同一個人重複打開時應該是同一場花雨，
+  而不是每次都換一套——那會讓人以為畫面在閃。左右各七片，中間 34%–66%
+  留空給名字。
+*/
+const PETALS = [
+  { left: 3, size: 10, delay: 0.05, fall: 3.0, drift: 26, spin: 300 },
+  { left: 8, size: 7, delay: 0.42, fall: 2.6, drift: -14, spin: -220 },
+  { left: 14, size: 11, delay: 0.18, fall: 3.3, drift: 34, spin: 190 },
+  { left: 19, size: 8, delay: 0.68, fall: 2.8, drift: -22, spin: 260 },
+  { left: 25, size: 9, delay: 0.3, fall: 3.1, drift: 18, spin: -300 },
+  { left: 30, size: 6, delay: 0.88, fall: 2.4, drift: 28, spin: 210 },
+  { left: 34, size: 8, delay: 0.55, fall: 3.4, drift: -30, spin: -170 },
+  { left: 66, size: 9, delay: 0.12, fall: 3.2, drift: 24, spin: -250 },
+  { left: 71, size: 7, delay: 0.6, fall: 2.7, drift: -26, spin: 290 },
+  { left: 77, size: 11, delay: 0.25, fall: 3.5, drift: 16, spin: 200 },
+  { left: 82, size: 8, delay: 0.78, fall: 2.9, drift: -18, spin: -280 },
+  { left: 88, size: 10, delay: 0.38, fall: 3.1, drift: 30, spin: 230 },
+  { left: 93, size: 6, delay: 0.95, fall: 2.5, drift: -12, spin: -190 },
+  { left: 97, size: 9, delay: 0.5, fall: 3.3, drift: 22, spin: 270 },
+];
+
 type Opened = {
   id: string;
   nickname: string;
@@ -398,10 +422,41 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                     顯示真實姓名而不是暱稱。這一頁是給主辦方核對「這是誰」
                     用的，而暱稱在標題列已經有了——兩處都放暱稱等於浪費
                     版面上最大的那一行。
+
+                    兩側原本是一大片空白。落花與細線把它填起來，同時
+                    把視線收攏到中間的名字上。
                   */}
-                  <p className="showcase-name px mb-6 text-center text-2xl font-black text-neon lg:text-4xl">
-                    {detail.realName}
-                  </p>
+                  <div className="showcase-crown mb-2" key={`crown-${opened.id}`}>
+                    <span aria-hidden="true">
+                      {PETALS.map((p, i) => (
+                        <i
+                          key={i}
+                          className="showcase-petal"
+                          style={
+                            {
+                              left: `${p.left}%`,
+                              "--size": `${p.size}px`,
+                              "--delay": `${p.delay}s`,
+                              "--fall": `${p.fall}s`,
+                              "--drift": `${p.drift}px`,
+                              "--spin": `${p.spin}deg`,
+                            } as React.CSSProperties
+                          }
+                        />
+                      ))}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="showcase-rule showcase-rule-left"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="showcase-rule showcase-rule-right"
+                    />
+                    <p className="showcase-name px relative text-center text-2xl font-black text-neon lg:text-4xl">
+                      {detail.realName}
+                    </p>
+                  </div>
 
                 <div
                   /*

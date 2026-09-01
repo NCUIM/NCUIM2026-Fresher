@@ -673,9 +673,15 @@ body::before {
   /* 讓底下那層光暈的 z-index: -1 停在自己的堆疊脈絡裡，
      不會沉到彈窗的背景後面。 */
   isolation: isolate;
-  animation:
-    showcase-name-strike 1.15s cubic-bezier(0.2, 0.8, 0.25, 1) 120ms both,
-    showcase-name-hum 4.6s ease-in-out 1.3s infinite;
+  /* 雷擊會動 letter-spacing。允許換行的話，字距一寬就折行、收窄又併回，
+     整個彈窗的高度跟著跳——而彈窗是可捲動的，於是畫面會上下彈。 */
+  white-space: nowrap;
+  /* 只有雷擊，之後就固定。
+
+     常駐的呼吸試過了：名字會被人盯著讀，而一直在變亮度的字讀起來很累，
+     也會把注意力從三欄內容上拉走。雷擊那一下已經交代了「電」。 */
+  animation: showcase-name-strike 1.15s cubic-bezier(0.2, 0.8, 0.25, 1) 120ms
+    both;
 }
 
 /* 文字後方的光暈。
@@ -700,7 +706,8 @@ body::before {
     transparent 76%
   );
   filter: blur(28px);
-  animation: showcase-name-bloom 4.6s ease-in-out 1.3s infinite;
+  /* 靜態光暈，不脹縮也不閃。它的作用是讓字浮起來，不是引起注意。 */
+  opacity: 0.75;
   pointer-events: none;
 }
 
@@ -759,97 +766,86 @@ body::before {
   }
 }
 
-/* 雷擊之後的常駐狀態：呼吸，中間夾一次抽搐。
+/* 姓名那一列的裝飾帶。
 
-   純正弦的呼吸看久了像螢幕在自己調亮度。每一輪丟一次短促的雙閃，
-   它就變成「那道電還沒完全散掉」——而那正是雷擊該留下的餘韻。
-   抽搐佔整輪不到十分之一，其餘時間是平穩的。 */
-@keyframes showcase-name-hum {
-  0%,
+   overflow: hidden 有兩個作用：花瓣不會飄出這一帶，而且**它保證這些
+   絕對定位的元素不會撐開彈窗的可捲動高度**——先前光暈就是這樣讓畫面
+   一直上下彈的。padding 要留夠，否則姓名的光暈會被自己的容器切掉。 */
+.showcase-crown {
+  position: relative;
+  overflow: hidden;
+  padding-block: 2.5rem;
+}
+
+/* 落花。集中在兩側，中間讓給名字。
+
+   形狀用 border-radius: 50% 0 50% 0——兩個對角圓、兩個對角尖，那是花瓣
+   最少筆畫的寫法，比放一張圖或一個 emoji 都輕。 */
+.showcase-petal {
+  position: absolute;
+  top: -10%;
+  width: var(--size, 9px);
+  height: var(--size, 9px);
+  border-radius: 50% 0 50% 0;
+  background: linear-gradient(
+    140deg,
+    color-mix(in oklab, var(--card-accent, var(--color-neon)) 85%, transparent),
+    color-mix(in oklab, var(--card-accent, var(--color-neon)) 25%, transparent)
+  );
+  opacity: 0;
+  animation: showcase-petal-fall var(--fall, 2.8s)
+    cubic-bezier(0.35, 0.05, 0.5, 1) var(--delay, 0s) forwards;
+  pointer-events: none;
+}
+
+/* 邊落邊轉邊飄。結尾淡出而不是停住——花瓣落到底之後就該不見了，
+   留在原地會變成版面上的一顆點。 */
+@keyframes showcase-petal-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.55);
+  }
+  14% {
+    opacity: 0.95;
+  }
+  72% {
+    opacity: 0.7;
+  }
   100% {
-    opacity: 1;
-    text-shadow:
-      0 0 10px var(--card-accent, var(--color-neon)),
-      0 0 28px color-mix(in oklab, var(--card-accent, var(--color-neon)) 40%, transparent);
-  }
-  35% {
-    opacity: 1;
-    text-shadow:
-      0 0 18px var(--card-accent, var(--color-neon)),
-      0 0 50px color-mix(in oklab, var(--card-accent, var(--color-neon)) 65%, transparent);
-  }
-  55% {
-    opacity: 1;
-    text-shadow:
-      0 0 11px var(--card-accent, var(--color-neon)),
-      0 0 30px color-mix(in oklab, var(--card-accent, var(--color-neon)) 42%, transparent);
-  }
-  /* ── 抽搐 ── */
-  61% {
-    opacity: 0.42;
-    text-shadow: 0 0 4px var(--card-accent, var(--color-neon));
-  }
-  63% {
-    opacity: 1;
-    text-shadow:
-      0 0 3px #fff,
-      0 0 26px var(--card-accent, var(--color-neon)),
-      0 0 66px var(--card-accent, var(--color-neon));
-  }
-  66% {
-    opacity: 0.55;
-    text-shadow: 0 0 6px var(--card-accent, var(--color-neon));
-  }
-  69% {
-    opacity: 1;
-    text-shadow:
-      0 0 2px #fff,
-      0 0 22px var(--card-accent, var(--color-neon)),
-      0 0 54px var(--card-accent, var(--color-neon));
-  }
-  /* ── 回到平穩 ── */
-  80% {
-    opacity: 1;
-    text-shadow:
-      0 0 12px var(--card-accent, var(--color-neon)),
-      0 0 32px color-mix(in oklab, var(--card-accent, var(--color-neon)) 45%, transparent);
+    opacity: 0;
+    transform: translate3d(var(--drift, 18px), 210px, 0)
+      rotate(var(--spin, 240deg)) scale(1);
   }
 }
 
-/* 後方光暈跟著同一個節奏脹縮，抽搐時一起爆一下。 */
-@keyframes showcase-name-bloom {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: translate(-50%, -50%) scale(0.94);
-  }
-  35% {
-    opacity: 0.9;
-    transform: translate(-50%, -50%) scale(1.08);
-  }
-  55% {
-    opacity: 0.58;
-    transform: translate(-50%, -50%) scale(0.96);
-  }
-  61% {
-    opacity: 0.2;
-    transform: translate(-50%, -50%) scale(0.88);
-  }
-  63% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.16);
-  }
-  66% {
-    opacity: 0.3;
-    transform: translate(-50%, -50%) scale(0.92);
-  }
-  69% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-  80% {
-    opacity: 0.62;
-    transform: translate(-50%, -50%) scale(1);
+/* 姓名兩側的細線，往中間漸淡。讓那一行有個座落的地方，
+   而不是浮在一片空白的正中央。 */
+.showcase-rule {
+  position: absolute;
+  top: 50%;
+  width: clamp(2rem, 14%, 9rem);
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in oklab, var(--card-accent, var(--color-neon)) 45%, transparent)
+  );
+  pointer-events: none;
+}
+
+.showcase-rule-left {
+  left: 6%;
+}
+
+.showcase-rule-right {
+  right: 6%;
+  transform: scaleX(-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showcase-petal {
+    animation: none;
+    opacity: 0;
   }
 }
 
@@ -905,11 +901,8 @@ body::before {
     transform: none;
     text-shadow: 0 0 12px var(--card-accent, var(--color-neon));
   }
-  /* 光暈留著、停掉脹縮——它是版面的一部分，不只是動態。 */
   .showcase-name::before {
-    animation: none;
     opacity: 0.7;
-    transform: translate(-50%, -50%);
   }
   /* 背光保留，只停掉呼吸——它是版面的一部分，不只是動態效果。 */
   .card-backlight::before {

@@ -612,6 +612,66 @@ body::before {
   }
 }
 
+/* 展示彈窗的閃電。
+
+   用不規則的兩次閃而不是一次淡入淡出——真實的閃電是連擊，均勻的漸變
+   看起來只會像螢幕亮度在變。數值刻意不對稱：第二下比第一下弱且短。 */
+.showcase-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    color-mix(in oklab, white 70%, transparent) 48%,
+    color-mix(in oklab, var(--color-neon) 60%, transparent) 53%,
+    transparent 70%
+  );
+  opacity: 0;
+  animation: showcase-flash 900ms ease-out 60ms 1 both;
+  pointer-events: none;
+}
+
+@keyframes showcase-flash {
+  0% {
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.85;
+  }
+  11% {
+    opacity: 0.08;
+  }
+  17% {
+    opacity: 0.55;
+  }
+  26% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 姓名浮現。字距從寬收攏、模糊化開——像訊號對焦，而不是單純淡入。 */
+.showcase-name {
+  animation: showcase-name-in 1s cubic-bezier(0.2, 0.8, 0.25, 1) 180ms both;
+}
+
+@keyframes showcase-name-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.75em;
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.28em;
+    filter: blur(0);
+  }
+}
+
 /* 名次列依序落下。--row 由 JS 給序號，讓它們有先後而不是整片一起出現。 */
 .rank-row {
   opacity: 0;
@@ -651,9 +711,16 @@ body::before {
     opacity: 1;
     transform: none;
   }
-  .card-shine::after {
+  .card-shine::after,
+  .showcase-flash {
     animation: none;
     opacity: 0;
+  }
+  .showcase-name {
+    animation: none;
+    opacity: 1;
+    letter-spacing: 0.28em;
+    filter: none;
   }
   /* 背光保留，只停掉呼吸——它是版面的一部分，不只是動態效果。 */
   .card-backlight::before {

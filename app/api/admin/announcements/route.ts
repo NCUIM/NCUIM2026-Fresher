@@ -13,6 +13,48 @@ const announcementSchema = z.object({
   eventId: z.string().optional(),
 });
 
+/**
+ * 列出這場活動的公告，新的在前。
+ *
+ * 後台先前只能發、不能看已發過什麼——要修正一則錯誤的公告，得先知道
+ * 它長什麼樣。順便回傳已讀人數，讓人在按下修改前知道影響範圍。
+ */
+export async function GET(req: Request) {
+  const admin = await getCurrentAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "需要管理員權限" }, { status: 401 });
+  }
+
+  const requested = new URL(req.url).searchParams.get("eventId");
+  const event = requested
+    ? await prisma.event.findUnique({ where: { id: requested } })
+    : await resolveAdminEvent(admin);
+
+  if (!event || !(await canAccessEvent(admin, event.id))) {
+    return NextResponse.json({ error: "找不到活動" }, { status: 404 });
+  }
+
+  const announcements = await prisma.announcement.findMany({
+    where: { eventId: event.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      body: true,
+      createdAt: true,
+      _count: { select: { reads: true } },
+    },
+  });
+
+  return NextResponse.json(
+    announcements.map((a) => ({
+      id: a.id,
+      body: a.body,
+      createdAt: a.createdAt,
+      reads: a._count.reads,
+    })),
+  );
+}
+
 /** 發布公告。僅限管理員——參與者的 session 在此不具任何效力。 */
 export async function POST(req: Request) {
   const admin = await getCurrentAdmin();

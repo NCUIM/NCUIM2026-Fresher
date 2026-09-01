@@ -76,6 +76,14 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
+type Posted = {
+  id: string;
+  body: string;
+  createdAt: string;
+  /** 已讀人數。修改會清掉已讀，按下去之前值得先知道會驚動幾個人。 */
+  reads: number;
+};
+
 export function AdminDashboard({
   eventId,
   initial,
@@ -94,6 +102,10 @@ export function AdminDashboard({
   const [isArchived, setIsArchived] = useState(archived);
   const [canScan, setCanScan] = useState(scanningOpen);
   const [announcement, setAnnouncement] = useState("");
+  const [posted, setPosted] = useState<Posted[] | null>(null);
+  const [editing, setEditing] = useState<{ id: string; body: string } | null>(
+    null,
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [rescue, setRescue] = useState<{ nickname: string; url: string } | null>(null);
 
@@ -131,6 +143,48 @@ export function AdminDashboard({
     });
   }, [participants, query, roleFilter, teamFilter]);
 
+  async function loadPosted() {
+    const res = await fetch(
+      `/api/admin/announcements?eventId=${encodeURIComponent(eventId)}`,
+    );
+    if (!res.ok) {
+      setNotice("讀取公告失敗");
+      return;
+    }
+    setPosted(await res.json());
+  }
+
+  async function saveEdit() {
+    if (!editing || !editing.body.trim()) return;
+    const res = await fetch(`/api/admin/announcements/${editing.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: editing.body }),
+    });
+    if (!res.ok) {
+      setNotice("修改失敗");
+      return;
+    }
+    setEditing(null);
+    setNotice("公告已更新，所有人會再看到一次");
+    await loadPosted();
+  }
+
+  async function removePosted(a: Posted) {
+    if (!confirm(`確定要刪除這則公告？
+
+「${a.body.slice(0, 40)}」`)) return;
+    const res = await fetch(`/api/admin/announcements/${a.id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      setNotice("刪除失敗");
+      return;
+    }
+    setNotice("公告已刪除");
+    await loadPosted();
+  }
+
   async function publish() {
     if (!announcement.trim()) return;
     const res = await fetch("/api/admin/announcements", {
@@ -139,7 +193,10 @@ export function AdminDashboard({
       body: JSON.stringify({ eventId, body: announcement }),
     });
     setNotice(res.ok ? "公告已發布" : "發布失敗");
-    if (res.ok) setAnnouncement("");
+    if (res.ok) {
+      setAnnouncement("");
+      if (posted) await loadPosted();
+    }
   }
 
   async function issueRescue(p: Participant) {
@@ -280,6 +337,88 @@ export function AdminDashboard({
         >
           發布
         </button>
+
+        {/*
+          已發布的清單預設收起來。多數時候進這一頁是為了「再發一則」，
+          而不是翻舊的——載入後才顯示，也順便省下一次查詢。
+        */}
+        {posted === null ? (
+          <button
+            onClick={loadPosted}
+            className="tap-target self-start text-xs text-dim underline transition-colors hover:text-neon"
+          >
+            查看／修改已發布的公告
+          </button>
+        ) : posted.length === 0 ? (
+          <p className="text-xs text-faint">這場活動還沒有發布過公告。</p>
+        ) : (
+          <ul className="mt-1 flex flex-col gap-2">
+            {posted.map((a) => (
+              <li
+                key={a.id}
+                className="flex flex-col gap-2 rounded-lg border border-line px-3 py-2.5"
+              >
+                {editing?.id === a.id ? (
+                  <>
+                    <textarea
+                      value={editing.body}
+                      onChange={(e) =>
+                        setEditing({ id: a.id, body: e.target.value })
+                      }
+                      rows={3}
+                      className="resize-none rounded-sm border border-neon/60 bg-void px-3 py-2 text-sm text-chalk"
+                    />
+                    {/*
+                      把代價講在按下去之前，而不是事後才用一句通知交代。
+                    */}
+                    <p className="text-xs text-moon">
+                      儲存後這則會重新標記為未讀
+                      {a.reads > 0 && `，已看過的 ${a.reads} 人會再收到一次`}。
+                    </p>
+                    <span className="flex gap-2">
+                      <button
+                        onClick={saveEdit}
+                        className="tap-target flex-1 rounded-sm bg-neon py-1.5 text-xs font-bold text-void"
+                      >
+                        儲存
+                      </button>
+                      <button
+                        onClick={() => setEditing(null)}
+                        className="tap-target flex-1 rounded-sm border border-line py-1.5 text-xs text-dim"
+                      >
+                        取消
+                      </button>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm break-words whitespace-pre-wrap">
+                      {a.body}
+                    </p>
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
+                      <span>
+                        {new Date(a.createdAt).toLocaleString("zh-TW")}
+                      </span>
+                      <span>已讀 {a.reads}</span>
+                      <button
+                        onClick={() => setEditing({ id: a.id, body: a.body })}
+                        className="tap-target ml-auto text-neon underline"
+                      >
+                        修改
+                      </button>
+                      <button
+                        onClick={() => removePosted(a)}
+                        className="tap-target text-flare underline"
+                      >
+                        刪除
+                      </button>
+                    </span>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {notice && (

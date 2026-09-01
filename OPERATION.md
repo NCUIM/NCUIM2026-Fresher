@@ -59,9 +59,20 @@ npm run dev
 
 ```bash
 npm run dev          # 開發伺服器（3000）
-npm run build        # 正式建置，也用來檢查型別
+npm run typecheck    # 只檢查型別，比完整建置快得多
+npm run build        # 正式建置
 npm run db:studio    # 網頁介面瀏覽與編輯資料庫
 ```
+
+> `typecheck` 帶著 `--incremental false`，**不要拿掉**。
+>
+> Next 會在建置時產生 `.next/types/routes.d.ts`（所有路由的型別）。
+> 開著增量快取的話，新增一支 API 路由之後 `tsc` 會沿用舊的快取，
+> 報出「這個路由不存在」的假錯誤——而 `npm run build` 同時是通過的，
+> 於是看起來像建置與型別檢查互相矛盾。
+>
+> 這個專案的規模下，完整檢查反而**比增量快**（實測 2.2s vs 2.9s），
+> 所以關掉沒有代價。
 
 ### 改了 `prisma/schema.prisma` 之後
 

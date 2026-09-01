@@ -36,6 +36,8 @@ export default async function MePage() {
       }),
     ]);
 
+  const myCard = toCardView(me);
+
   return (
     <NavShell>
       {/*
@@ -46,8 +48,22 @@ export default async function MePage() {
         底色與頭像都是他自己選的，要能立刻確認選出來的效果。
       */}
       <header className="flex flex-col items-center gap-3 pt-2">
-        <div className="w-full max-w-sm">
-          <CardDisplay card={toCardView(me)} eventName={me.event.name} />
+        {/*
+          背光取自己選的卡面顏色，掃光在載入時掠過一次。
+
+          這一頁是「看看我的卡長什麼樣」，那張卡值得被當成一件東西呈現，
+          而不是版面上的一個區塊。--card-accent 交給 CSS，背光才會跟著
+          他的選色走。
+        */}
+        <div
+          className="card-backlight w-full max-w-sm"
+          style={
+            { "--card-accent": myCard.color.accent } as React.CSSProperties
+          }
+        >
+          <div className="card-shine rounded-xl">
+            <CardDisplay card={myCard} eventName={me.event.name} />
+          </div>
         </div>
         <EditLink href="/profile" label="編輯個人資料" />
       </header>

@@ -326,7 +326,7 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
         >
           <div
             /* 浮光牆需要空間才漂得起來，九宮格則是固定的三乘三。 */
-            className={`card-pop my-auto w-full rounded-xl border border-line surface p-5 ${
+            className={`card-pop relative my-auto w-full rounded-xl border border-line surface p-5 ${
               opened.view === "all"
                 ? "max-w-6xl"
                 : opened.view === "showcase"
@@ -366,6 +366,26 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   給太寬只會把格子撐成巨大的方塊；浮光牆最需要橫向空間，
                   字柱才漂得開。
                 */
+                <>
+                  {/*
+                    閃電蓋在整個彈窗上，key 綁 id 讓換人時重播。
+                    aria-hidden：它純粹是視覺，讀螢幕的人不需要知道畫面閃了。
+                  */}
+                  <span
+                    key={`flash-${opened.id}`}
+                    aria-hidden="true"
+                    className="showcase-flash"
+                  />
+
+                  {/*
+                    姓名放在三欄上方那塊空白。原本那裡只有標題列靠左，
+                    右側大半是空的——而這是一張「介紹某個人」的版面，
+                    主角的名字本來就該是最大的那一行。
+                  */}
+                  <p className="showcase-name px text-glow-neon mb-6 text-center text-2xl font-black text-neon lg:text-4xl">
+                    {opened.nickname}
+                  </p>
+
                 <div
                   /*
                     九宮格與浮光牆等寬，中間的卡片略寬。
@@ -394,6 +414,7 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                     {wallBlock}
                   </Panel>
                 </div>
+                </>
               ) : opened.view === "card" ? (
                 renderCard("normal")
               ) : opened.view === "showcase" ? (

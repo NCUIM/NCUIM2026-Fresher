@@ -46,11 +46,20 @@ export function CardPopup({
           {
             "--pop-x": `${origin.dx}px`,
             "--pop-y": `${origin.dy}px`,
+            "--card-accent": card.color.accent,
           } as React.CSSProperties
         }
         onClick={(e) => e.stopPropagation()}
       >
-        <CardDisplay card={card} eventName={eventName} />
+        {/*
+          背光與掃光只包住卡片本身，不包下面的關閉鈕——那顆是介面，
+          不是收藏品的一部分。
+        */}
+        <div className="card-backlight">
+          <div className="card-shine rounded-xl">
+            <CardDisplay card={card} eventName={eventName} />
+          </div>
+        </div>
         <button
           onClick={onClose}
           className="tap-target mt-3 w-full rounded-sm border border-line py-2.5 text-sm text-dim"

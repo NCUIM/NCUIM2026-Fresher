@@ -558,30 +558,35 @@ body::before {
   isolation: isolate;
 }
 
+/* inset 要夠大。卡片本身是不透明的（底色由主人選），光暈的中央整片
+   都被蓋住，看得到的只有溢出卡片邊界的那一圈——外擴太小的話，再被
+   blur 化開就幾乎消失了。-26% 才留得住一圈看得出來的光。 */
 .card-backlight::before {
   content: "";
   position: absolute;
-  inset: -14%;
+  inset: -26%;
   z-index: -1;
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    color-mix(in oklab, var(--card-accent, var(--color-neon)) 55%, transparent),
-    transparent 72%
+    color-mix(in oklab, var(--card-accent, var(--color-neon)) 72%, transparent),
+    color-mix(in oklab, var(--card-accent, var(--color-neon)) 22%, transparent)
+      55%,
+    transparent 78%
   );
-  filter: blur(34px);
+  filter: blur(38px);
   animation: card-backlight 4.5s ease-in-out infinite alternate;
   pointer-events: none;
 }
 
 @keyframes card-backlight {
   from {
-    opacity: 0.5;
-    transform: scale(0.95);
+    opacity: 0.62;
+    transform: scale(0.94);
   }
   to {
-    opacity: 0.95;
-    transform: scale(1.05);
+    opacity: 1;
+    transform: scale(1.06);
   }
 }
 
@@ -654,21 +659,197 @@ body::before {
   }
 }
 
-/* 姓名浮現。字距從寬收攏、模糊化開——像訊號對焦，而不是單純淡入。 */
+/* 姓名以雷擊的方式打出來。
+
+   三件事同時發生才像電，少一件都會變成普通的淡入：
+     1. 忽明忽滅——不規則的閃爍，中間要真的暗下去
+     2. 位移與傾斜——被電流推歪，然後歸位
+     3. 白芯外暈——光的核心是白的，顏色在外圈
+
+   字距同時從寬收攏，讓它看起來是被「打」到定位的。
+   收尾留一層恆定的輝光，避免雷擊結束後字忽然變得很平。 */
 .showcase-name {
-  animation: showcase-name-in 1s cubic-bezier(0.2, 0.8, 0.25, 1) 180ms both;
+  position: relative;
+  /* 讓底下那層光暈的 z-index: -1 停在自己的堆疊脈絡裡，
+     不會沉到彈窗的背景後面。 */
+  isolation: isolate;
+  animation:
+    showcase-name-strike 1.15s cubic-bezier(0.2, 0.8, 0.25, 1) 120ms both,
+    showcase-name-hum 4.6s ease-in-out 1.3s infinite;
 }
 
-@keyframes showcase-name-in {
-  from {
+/* 文字後方的光暈。
+
+   單靠 text-shadow 的呼吸太細微——那只是在改模糊半徑，眼睛幾乎讀不到。
+   在字後面放一團真的會脹縮的光，呼吸才看得出來。
+
+   高度給 180% 而不是 100%：光要溢出字的上下緣，否則會像一條底線。 */
+.showcase-name::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: 72%;
+  height: 180%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--card-accent, var(--color-neon)) 42%, transparent),
+    transparent 76%
+  );
+  filter: blur(28px);
+  animation: showcase-name-bloom 4.6s ease-in-out 1.3s infinite;
+  pointer-events: none;
+}
+
+@keyframes showcase-name-strike {
+  0% {
     opacity: 0;
-    letter-spacing: 0.75em;
-    filter: blur(10px);
+    letter-spacing: 0.95em;
+    filter: blur(16px);
+    transform: translateX(-8px) skewX(14deg);
+    text-shadow: none;
   }
-  to {
+  10% {
+    opacity: 1;
+    letter-spacing: 0.36em;
+    filter: blur(0);
+    transform: translateX(5px) skewX(-7deg);
+    text-shadow:
+      0 0 2px #fff,
+      0 0 20px var(--card-accent, var(--color-neon)),
+      0 0 48px var(--card-accent, var(--color-neon));
+  }
+  16% {
+    opacity: 0.12;
+    filter: blur(4px);
+    transform: translateX(-4px) skewX(5deg);
+  }
+  25% {
+    opacity: 1;
+    letter-spacing: 0.31em;
+    filter: blur(0);
+    transform: translateX(3px) skewX(-3deg);
+    text-shadow:
+      0 0 3px #fff,
+      0 0 26px var(--card-accent, var(--color-neon)),
+      0 0 64px var(--card-accent, var(--color-neon));
+  }
+  33% {
+    opacity: 0.35;
+    filter: blur(2px);
+  }
+  42% {
+    opacity: 1;
+    transform: translateX(-1px) skewX(1deg);
+  }
+  55% {
+    opacity: 0.7;
+  }
+  100% {
     opacity: 1;
     letter-spacing: 0.28em;
     filter: blur(0);
+    transform: none;
+    text-shadow:
+      0 0 10px var(--card-accent, var(--color-neon)),
+      0 0 30px color-mix(in oklab, var(--card-accent, var(--color-neon)) 45%, transparent);
+  }
+}
+
+/* 雷擊之後的常駐狀態：呼吸，中間夾一次抽搐。
+
+   純正弦的呼吸看久了像螢幕在自己調亮度。每一輪丟一次短促的雙閃，
+   它就變成「那道電還沒完全散掉」——而那正是雷擊該留下的餘韻。
+   抽搐佔整輪不到十分之一，其餘時間是平穩的。 */
+@keyframes showcase-name-hum {
+  0%,
+  100% {
+    opacity: 1;
+    text-shadow:
+      0 0 10px var(--card-accent, var(--color-neon)),
+      0 0 28px color-mix(in oklab, var(--card-accent, var(--color-neon)) 40%, transparent);
+  }
+  35% {
+    opacity: 1;
+    text-shadow:
+      0 0 18px var(--card-accent, var(--color-neon)),
+      0 0 50px color-mix(in oklab, var(--card-accent, var(--color-neon)) 65%, transparent);
+  }
+  55% {
+    opacity: 1;
+    text-shadow:
+      0 0 11px var(--card-accent, var(--color-neon)),
+      0 0 30px color-mix(in oklab, var(--card-accent, var(--color-neon)) 42%, transparent);
+  }
+  /* ── 抽搐 ── */
+  61% {
+    opacity: 0.42;
+    text-shadow: 0 0 4px var(--card-accent, var(--color-neon));
+  }
+  63% {
+    opacity: 1;
+    text-shadow:
+      0 0 3px #fff,
+      0 0 26px var(--card-accent, var(--color-neon)),
+      0 0 66px var(--card-accent, var(--color-neon));
+  }
+  66% {
+    opacity: 0.55;
+    text-shadow: 0 0 6px var(--card-accent, var(--color-neon));
+  }
+  69% {
+    opacity: 1;
+    text-shadow:
+      0 0 2px #fff,
+      0 0 22px var(--card-accent, var(--color-neon)),
+      0 0 54px var(--card-accent, var(--color-neon));
+  }
+  /* ── 回到平穩 ── */
+  80% {
+    opacity: 1;
+    text-shadow:
+      0 0 12px var(--card-accent, var(--color-neon)),
+      0 0 32px color-mix(in oklab, var(--card-accent, var(--color-neon)) 45%, transparent);
+  }
+}
+
+/* 後方光暈跟著同一個節奏脹縮，抽搐時一起爆一下。 */
+@keyframes showcase-name-bloom {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  35% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  55% {
+    opacity: 0.58;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  61% {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) scale(0.88);
+  }
+  63% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.16);
+  }
+  66% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  69% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  80% {
+    opacity: 0.62;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -721,6 +902,14 @@ body::before {
     opacity: 1;
     letter-spacing: 0.28em;
     filter: none;
+    transform: none;
+    text-shadow: 0 0 12px var(--card-accent, var(--color-neon));
+  }
+  /* 光暈留著、停掉脹縮——它是版面的一部分，不只是動態。 */
+  .showcase-name::before {
+    animation: none;
+    opacity: 0.7;
+    transform: translate(-50%, -50%);
   }
   /* 背光保留，只停掉呼吸——它是版面的一部分，不只是動態效果。 */
   .card-backlight::before {

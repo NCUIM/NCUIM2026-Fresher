@@ -14,7 +14,7 @@ import { Avatar } from "@/components/card/Avatar";
 type Props = {
   initial: {
     nickname: string;
-    realName: string | null;
+    realName: string;
     bio: string | null;
     socialUrl: string | null;
     icons: string[];
@@ -32,7 +32,7 @@ export function ProfileEditor({ initial }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [nickname, setNickname] = useState(initial.nickname);
-  const [realName, setRealName] = useState(initial.realName ?? "");
+  const [realName, setRealName] = useState(initial.realName);
   const [bio, setBio] = useState(initial.bio ?? "");
   const [socialUrl, setSocialUrl] = useState(initial.socialUrl ?? "");
   const [icons, setIcons] = useState<string[]>(initial.icons);

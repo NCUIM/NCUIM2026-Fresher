@@ -17,6 +17,8 @@ type Entry = {
 
 type Detail = {
   nickname: string;
+  /** 只有主辦方看得到。 */
+  realName: string;
   card: CardView;
   wall: WallImpression[];
   showcase: { position: number; nickname: string; avatarUrl: string | null }[];
@@ -366,7 +368,17 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                   給太寬只會把格子撐成巨大的方塊；浮光牆最需要橫向空間，
                   字柱才漂得開。
                 */
-                <>
+                <div
+                  /*
+                    --card-accent 提到這一層：姓名的雷擊與三欄的背光都要用
+                    它，而姓名是 grid 的兄弟節點，掛在 grid 上它拿不到。
+                  */
+                  style={
+                    {
+                      "--card-accent": detail.card.color.accent,
+                    } as React.CSSProperties
+                  }
+                >
                   {/*
                     閃電蓋在整個彈窗上，key 綁 id 讓換人時重播。
                     aria-hidden：它純粹是視覺，讀螢幕的人不需要知道畫面閃了。
@@ -382,8 +394,13 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                     右側大半是空的——而這是一張「介紹某個人」的版面，
                     主角的名字本來就該是最大的那一行。
                   */}
-                  <p className="showcase-name px text-glow-neon mb-6 text-center text-2xl font-black text-neon lg:text-4xl">
-                    {opened.nickname}
+                  {/*
+                    顯示真實姓名而不是暱稱。這一頁是給主辦方核對「這是誰」
+                    用的，而暱稱在標題列已經有了——兩處都放暱稱等於浪費
+                    版面上最大的那一行。
+                  */}
+                  <p className="showcase-name px mb-6 text-center text-2xl font-black text-neon lg:text-4xl">
+                    {detail.realName}
                   </p>
 
                 <div
@@ -394,15 +411,9 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                     0.72fr 讓它縮成一排小方塊，右邊卻有大片空白。與牆等寬
                     之後兩側的重量才平衡。
 
-                    --card-accent 放在這一層而不是各自帶：三欄講的是同一
-                    個人，背光用同一個顏色才像一整面板子。
+                    背光的顏色由外層的 --card-accent 提供。
                   */
                   className="grid gap-7 lg:grid-cols-[1fr_1.2fr_1fr]"
-                  style={
-                    {
-                      "--card-accent": detail.card.color.accent,
-                    } as React.CSSProperties
-                  }
                 >
                   <Panel label="SHOWCASE" title="九宮格">
                     {showcaseBlock}
@@ -414,7 +425,7 @@ export function AdminLeaderboard({ entries }: { entries: Entry[] }) {
                     {wallBlock}
                   </Panel>
                 </div>
-                </>
+                </div>
               ) : opened.view === "card" ? (
                 renderCard("normal")
               ) : opened.view === "showcase" ? (

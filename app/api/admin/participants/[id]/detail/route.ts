@@ -48,6 +48,13 @@ export async function GET(
   return NextResponse.json({
     nickname: target.nickname,
     /*
+      真實姓名只有主辦方看得到（CONTEXT.md）。這支端點本來就要求管理員
+      身分並驗證場次歸屬，所以帶出來不擴大暴露面——但它**不能**流進任何
+      參與者看得到的回應裡。
+      非必填，沒填的人是 null。
+    */
+    realName: target.realName,
+    /*
       與參與者端同一個 CardView，讓後台看到的就是本人對外的那一面。
       審核違規頭像或暱稱時，看到的必須跟檢舉人看到的一致。
     */

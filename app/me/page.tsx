@@ -56,7 +56,8 @@ export default async function MePage() {
           他的選色走。
         */}
         <div
-          className="card-backlight w-full max-w-sm"
+          /* py 給光暈往上下擴散的空間，不然卡片緊貼版面邊緣時會被切掉。 */
+          className="card-backlight w-full max-w-sm py-6"
           style={
             { "--card-accent": myCard.color.accent } as React.CSSProperties
           }

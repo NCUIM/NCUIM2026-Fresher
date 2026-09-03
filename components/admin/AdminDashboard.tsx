@@ -11,7 +11,8 @@ import { Avatar } from "@/components/card/Avatar";
  *
  * sessionToken 是登入憑證，不是資料——把它端到畫面上，它就會留在瀏覽器
  * 快取、截圖與任何側錄的流量裡，而任何拿到它的人都能冒充本人。
- * 需要幫人重新綁定裝置時走 rescue 端點，那裡換發新的並讓舊的失效。
+ * 需要幫人重新綁定裝置時走 rescue 端點，那裡發的是一次性、30 分鐘到期的
+ * 找回權杖，不是 sessionToken 本身——所以就算那個網址被拍走也有時效。
  */
 type Participant = {
   id: string;
@@ -107,7 +108,11 @@ export function AdminDashboard({
     null,
   );
   const [notice, setNotice] = useState<string | null>(null);
-  const [rescue, setRescue] = useState<{ nickname: string; url: string } | null>(null);
+  const [rescue, setRescue] = useState<{
+    nickname: string;
+    url: string;
+    expiresInMinutes: number;
+  } | null>(null);
 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
@@ -208,7 +213,11 @@ export function AdminDashboard({
       return;
     }
     const data = await res.json();
-    setRescue({ nickname: data.nickname, url: data.rescueUrl });
+    setRescue({
+      nickname: data.nickname,
+      url: data.rescueUrl,
+      expiresInMinutes: data.expiresInMinutes,
+    });
   }
 
   async function moderate(p: Participant) {
@@ -434,7 +443,10 @@ export function AdminDashboard({
           </p>
           <p className="text-xs break-all text-moon/80">{rescue.url}</p>
           <p className="text-xs text-moon/70">
-            請本人在自己的手機上開啟。舊的連結已同時失效。
+            請<strong className="font-bold">本人當面</strong>在自己的手機上開啟，
+            開啟後要在畫面上確認一次才會完成綁定。
+            這個連結{rescue.expiresInMinutes} 分鐘後失效、而且只能用一次——
+            所以不要用訊息軟體傳送，也不要先自己點開試。
           </p>
           <button
             onClick={() => setRescue(null)}

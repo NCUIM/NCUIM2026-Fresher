@@ -155,3 +155,6 @@ vite.config.ts.timestamp-*
 skills-lock.json
 
 GCP/
+
+# 資安報告。含完整攻擊路徑與尚未修補的弱點細節，不進版控。
+/security/

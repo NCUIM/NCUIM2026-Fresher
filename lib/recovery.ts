@@ -2,7 +2,7 @@ import type { TokenPurpose } from "@prisma/client";
 import { prisma } from "./prisma";
 import { generateSessionToken } from "./codes";
 
-const TTL_MINUTES: Record<TokenPurpose, number> = {
+export const TTL_MINUTES: Record<TokenPurpose, number> = {
   // 驗證信可能在報到後隔一陣子才被點開，給整場活動加上緩衝的時間。
   VERIFY_EMAIL: 60 * 24,
   // 找回身分的連結權限最大，存活時間壓到最短。
@@ -29,6 +29,42 @@ export async function issueToken(
     },
   });
   return token;
+}
+
+export type PeekResult = { ok: true; nickname: string } | { ok: false };
+
+/**
+ * 檢視權杖現在能不能用，**但不消費它**。
+ *
+ * 存在的理由是把「看」與「用」拆成兩個動作。先前 /recover/[token] 是一支
+ * GET，在被開啟的當下就消費權杖並種下身分 cookie——於是任何人都能替自己
+ * 要一封找回信，再把那個連結傳給別人，對方的瀏覽器就會靜默地變成傳連結
+ * 的那個人（session fixation）。受害者之後掃到的人、寫的每一則短評、
+ * 填進去的真實姓名與信箱，全部進到攻擊者的帳號裡。
+ *
+ * 拆開之後，種 cookie 一定來自使用者在確認頁按下的那一個 POST，
+ * 而 GET 回到它應有的樣子：沒有副作用。
+ *
+ * 順帶解掉另一個問題——信件掃描器與聊天軟體的連結預覽會預先抓取網址，
+ * 那會在本人點開之前就把一次性權杖燒掉，使用者只會看到「連結已失效」。
+ *
+ * 回傳暱稱供確認頁顯示「你是不是 XXX」。這不算多洩漏什麼：能拿到權杖的人
+ * 本來就能直接完成找回，暱稱也是卡片上對外公開的欄位。
+ */
+export async function peekToken(
+  token: string,
+  purpose: TokenPurpose,
+): Promise<PeekResult> {
+  const row = await prisma.recoveryToken.findUnique({
+    where: { token },
+    include: { participant: { select: { nickname: true } } },
+  });
+
+  if (!row || row.purpose !== purpose || row.usedAt || row.expiresAt < new Date()) {
+    return { ok: false };
+  }
+
+  return { ok: true, nickname: row.participant.nickname };
 }
 
 export type ConsumeResult =
